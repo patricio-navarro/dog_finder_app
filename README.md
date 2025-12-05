@@ -10,7 +10,7 @@ This application allows users to report lost dog sightings. It captures the loca
 - **Deployment**: Dockerized and ready for Cloud Run.
 
 ## 🏗️ System Architecture
-![System Architecture Sketch](static/architecture_sketch.png)
+![System Architecture Internal](static/architecture_google.png)
 
 ```mermaid
 graph TD
