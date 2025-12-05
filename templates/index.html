@@ -7,214 +7,726 @@
     <title>Lost Dog Finder</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
+    <style>
+        /* Add some inline styles for the new components if not in style.css */
+        body {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            margin: 0;
+            overflow: hidden;
+            /* Prevent body scroll, handle in containers */
+        }
 
+        .container {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            max-width: none;
+            /* Full width for map app feel */
+            padding: 0;
+            margin: 0;
+        }
+
+        header {
+            flex-shrink: 0;
+            padding: 10px 20px;
+            background: white;
+            z-index: 10;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        header .header-left {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        header img.logo {
+            height: 40px;
+            width: auto;
+            margin: 0;
+        }
+
+        header h1 {
+            margin: 0;
+            font-size: 1.2rem;
+        }
+
+        header p {
+            display: none;
+        }
+
+        /* Hide tagline for dense UI */
+
+        .tabs {
+            flex-shrink: 0;
+            display: flex;
+            justify-content: center;
+            background: white;
+            border-bottom: 1px solid #e0e0e0;
+            padding: 0 20px;
+        }
+
+        .tab-btn {
+            background: none;
+            border: none;
+            padding: 10px 20px;
+            font-size: 1rem;
+            font-weight: 600;
+            color: #777;
+            cursor: pointer;
+            border-bottom: 3px solid transparent;
+            transition: all 0.3s ease;
+        }
+
+        .tab-btn.active {
+            color: var(--primary-color, #d59563);
+            border-bottom-color: var(--primary-color, #d59563);
+        }
+
+        main {
+            flex-grow: 1;
+            position: relative;
+            overflow: hidden;
+            background: #f7f7f7;
+        }
+
+        .section-content {
+            display: none;
+            height: 100%;
+            animation: fadeIn 0.3s;
+        }
+
+        .section-content.active {
+            display: block;
+        }
+
+        /* Report Mode Layout */
+        #report-section {
+            padding: 20px;
+            overflow-y: auto;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        #report-section .map-container {
+            height: 300px;
+            margin-bottom: 20px;
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        /* Find Mode Layout (Airbnb Style) */
+        .finder-container {
+            display: flex;
+            height: 100%;
+        }
+
+        .finder-sidebar {
+            width: 40%;
+            min-width: 350px;
+            max-width: 500px;
+            background: white;
+            border-right: 1px solid #e0e0e0;
+            display: flex;
+            flex-direction: column;
+            z-index: 2;
+        }
+
+        .finder-filters {
+            padding: 15px;
+            border-bottom: 1px solid #eee;
+            background: white;
+        }
+
+        .filter-row {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        .filter-group {
+            flex: 1;
+        }
+
+        .filter-group label {
+            display: block;
+            font-size: 0.8rem;
+            color: #666;
+            margin-bottom: 4px;
+        }
+
+        .filter-group input {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 0.9rem;
+        }
+
+        .finder-results {
+            flex-grow: 1;
+            overflow-y: auto;
+            padding: 15px;
+        }
+
+        .sightings-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            /* List view in sidebar */
+            gap: 15px;
+        }
+
+        .sighting-card {
+            display: flex;
+            background: white;
+            border: 1px solid #eee;
+            border-radius: 12px;
+            overflow: hidden;
+            transition: transform 0.2s, box-shadow 0.2s;
+            cursor: pointer;
+            height: 120px;
+        }
+
+        .sighting-card:hover {
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+            border-color: #d59563;
+        }
+
+        .sighting-card img {
+            width: 120px;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .sighting-info {
+            padding: 12px;
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .sighting-date {
+            color: #888;
+            font-size: 0.85rem;
+            margin-bottom: 4px;
+        }
+
+        .sighting-loc {
+            font-weight: 600;
+            color: #333;
+            font-size: 1rem;
+        }
+
+        .finder-map {
+            flex-grow: 1;
+            background: #e0e0e0;
+            position: relative;
+        }
+
+        #find-map {
+            width: 100%;
+            height: 100%;
+        }
+
+        .search-area-btn {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: white;
+            padding: 10px 20px;
+            border-radius: 20px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+            font-weight: 600;
+            cursor: pointer;
+            z-index: 5;
+            border: none;
+            display: none;
+            /* Hidden until map moves */
+        }
+
+        .load-more-btn {
+            display: block;
+            width: 100%;
+            padding: 10px;
+            margin-top: 15px;
+            background: #f0f0f0;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            color: #555;
+            font-weight: 600;
+        }
+
+        .load-more-btn:hover {
+            background: #e0e0e0;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        @media (max-width: 768px) {
+            .finder-container {
+                flex-direction: column-reverse;
+            }
+
+            .finder-sidebar {
+                width: 100%;
+                height: 50%;
+                max-width: none;
+            }
+
+            .finder-map {
+                height: 50%;
+            }
+
+            .sighting-card {
+                height: 100px;
+            }
+
+            .sighting-card img {
+                width: 100px;
+            }
+
+            #report-section .map-container {
+                height: 200px;
+            }
+        }
+    </style>
 </head>
 
 <body>
     <div class="container">
         <header>
-            <img src="{{ url_for('static', filename='logo.png') }}" alt="Dog Finder Logo" class="logo">
-            <h1>Report a Lost Dog</h1>
-            <p>Help reunite lost dogs with their owners by reporting a sighting.</p>
+            <div class="header-left">
+                <img src="{{ url_for('static', filename='logo.png') }}" alt="Dog Finder Logo" class="logo">
+                <h1>Lost Dog Finder</h1>
+            </div>
+            <div class="tabs">
+                <button class="tab-btn active" onclick="switchTab('report')">Report</button>
+                <button class="tab-btn" onclick="switchTab('find')">Find</button>
+            </div>
         </header>
 
         <main>
-            <div class="map-container">
-                <div id="map"></div>
-                <div class="map-instruction">Click on the map to pin the location</div>
+            <!-- Report Section -->
+            <div id="report-section" class="section-content active">
+                <div class="map-container">
+                    <div id="map" style="width:100%; height:100%;"></div>
+                    <div id="map-instruction" class="map-instruction">Click on the map to pin the location</div>
+                </div>
+
+                <form id="sighting-form">
+                    <div class="form-group">
+                        <label for="date">Date Found</label>
+                        <input type="date" id="date" name="date" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="comments">Additional Comments</label>
+                        <textarea id="comments" name="comments" rows="3"
+                            placeholder="Describe the dog, condition, or exact location..."
+                            style="width:100%; padding:8px; border:1px solid #ddd; border-radius:4px; font-family:inherit;"></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="image">Upload Photo</label>
+                        <div class="file-input-wrapper">
+                            <button type="button" class="btn-secondary"
+                                onclick="document.getElementById('image').click()">Choose Image</button>
+                            <span id="file-name">No file chosen</span>
+                            <input type="file" id="image" name="image" accept="image/*" required hidden>
+                        </div>
+                    </div>
+
+                    <input type="hidden" id="lat" name="lat">
+                    <input type="hidden" id="lng" name="lng">
+
+                    <button type="submit" class="btn-primary" id="submit-btn">Submit Report</button>
+                </form>
             </div>
 
-            <form id="sighting-form">
-                <div class="form-group">
-                    <label for="date">Date Sighted</label>
-                    <input type="date" id="date" name="date" required>
-                </div>
+            <!-- Find Section (Split View) -->
+            <div id="find-section" class="section-content">
+                <div class="finder-container">
+                    <div class="finder-sidebar">
+                        <div class="finder-filters">
+                            <div class="filter-row">
+                                <div class="filter-group">
+                                    <label>Time Range</label>
+                                    <select id="filter-date-range" onchange="resetAndFetch()">
+                                        <option value="7">Last 7 days</option>
+                                        <option value="15">Last 15 days</option>
+                                        <option value="30" selected>Last month</option>
+                                        <option value="365">Last year</option>
+                                        <option value="all">All time</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div style="font-size: 0.8rem; color:#888;">
+                                Showing dogs in map area
+                            </div>
+                        </div>
 
-                <div class="form-group">
-                    <label for="image">Upload Photo</label>
-                    <div class="file-input-wrapper">
-                        <button type="button" class="btn-secondary"
-                            onclick="document.getElementById('image').click()">Choose Image</button>
-                        <span id="file-name">No file chosen</span>
-                        <input type="file" id="image" name="image" accept="image/*" required hidden>
+                        <div id="finder-results" class="finder-results">
+                            <div id="sightings-list" class="sightings-grid">
+                                <!-- Cards injected here -->
+                            </div>
+                            <button id="load-more-btn" class="load-more-btn hidden" onclick="loadMore()">Load
+                                More</button>
+                        </div>
+                    </div>
+
+                    <div class="finder-map">
+                        <button id="search-area-btn" class="search-area-btn" onclick="searchCurrentArea()">Search this
+                            area</button>
+                        <div id="find-map"></div>
                     </div>
                 </div>
-
-                <input type="hidden" id="lat" name="lat">
-                <input type="hidden" id="lng" name="lng">
-
-                <button type="submit" class="btn-primary" id="submit-btn">Submit Report</button>
-            </form>
+            </div>
         </main>
 
         <div id="notification" class="notification hidden"></div>
     </div>
 
     <script>
-        let map;
-        let marker;
+        let reportMap, findMap;
+        let reportMarker;
+        let sightingMarkers = [];
+        let currentMode = 'report';
+        let mapClickListener;
 
-        function initMap() {
-            // Default to a central location (e.g., World or user's approximate location)
-            // Here defaulting to San Francisco for demo purposes
+        // Find State
+        let nextCursor = null;
+        let isLoading = false;
+        let lastBounds = null;
+
+        function initMaps() {
             const defaultLocation = { lat: 37.7749, lng: -122.4194 };
+            const mapStyles = [
+                { elementType: "geometry", stylers: [{ color: "#242f3e" }] },
+                { elementType: "labels.text.stroke", stylers: [{ color: "#242f3e" }] },
+                { elementType: "labels.text.fill", stylers: [{ color: "#746855" }] },
+                { featureType: "road", elementType: "geometry", stylers: [{ color: "#38414e" }] },
+                { featureType: "road", elementType: "geometry.stroke", stylers: [{ color: "#212a37" }] },
+                { featureType: "water", elementType: "geometry", stylers: [{ color: "#17263c" }] },
+            ];
 
-            map = new google.maps.Map(document.getElementById("map"), {
+            // 1. Report Map
+            reportMap = new google.maps.Map(document.getElementById("map"), {
                 zoom: 12,
                 center: defaultLocation,
-                styles: [
-                    { elementType: "geometry", stylers: [{ color: "#242f3e" }] },
-                    { elementType: "labels.text.stroke", stylers: [{ color: "#242f3e" }] },
-                    { elementType: "labels.text.fill", stylers: [{ color: "#746855" }] },
-                    {
-                        featureType: "administrative.locality",
-                        elementType: "labels.text.fill",
-                        stylers: [{ color: "#d59563" }],
-                    },
-                    {
-                        featureType: "poi",
-                        elementType: "labels.text.fill",
-                        stylers: [{ color: "#d59563" }],
-                    },
-                    {
-                        featureType: "poi.park",
-                        elementType: "geometry",
-                        stylers: [{ color: "#263c3f" }],
-                    },
-                    {
-                        featureType: "poi.park",
-                        elementType: "labels.text.fill",
-                        stylers: [{ color: "#6b9a76" }],
-                    },
-                    {
-                        featureType: "road",
-                        elementType: "geometry",
-                        stylers: [{ color: "#38414e" }],
-                    },
-                    {
-                        featureType: "road",
-                        elementType: "geometry.stroke",
-                        stylers: [{ color: "#212a37" }],
-                    },
-                    {
-                        featureType: "road",
-                        elementType: "labels.text.fill",
-                        stylers: [{ color: "#9ca5b3" }],
-                    },
-                    {
-                        featureType: "road.highway",
-                        elementType: "geometry",
-                        stylers: [{ color: "#746855" }],
-                    },
-                    {
-                        featureType: "road.highway",
-                        elementType: "geometry.stroke",
-                        stylers: [{ color: "#1f2835" }],
-                    },
-                    {
-                        featureType: "road.highway",
-                        elementType: "labels.text.fill",
-                        stylers: [{ color: "#f3d19c" }],
-                    },
-                    {
-                        featureType: "water",
-                        elementType: "geometry",
-                        stylers: [{ color: "#17263c" }],
-                    },
-                    {
-                        featureType: "water",
-                        elementType: "labels.text.fill",
-                        stylers: [{ color: "#515c6d" }],
-                    },
-                    {
-                        featureType: "water",
-                        elementType: "labels.text.stroke",
-                        stylers: [{ color: "#17263c" }],
-                    },
-                ],
+                mapTypeControl: false,
+                styles: mapStyles
             });
 
-            map.addListener("click", (e) => {
-                placeMarkerAndPanTo(e.latLng);
+            reportMap.addListener("click", (e) => {
+                placeReportMarker(e.latLng);
             });
 
-            // Try HTML5 geolocation.
+            // 2. Find Map
+            findMap = new google.maps.Map(document.getElementById("find-map"), {
+                zoom: 12, // start zoomed out
+                center: defaultLocation,
+                mapTypeControl: false,
+                streetViewControl: false,
+                styles: mapStyles
+            });
+
+            findMap.addListener("dragend", () => {
+                document.getElementById('search-area-btn').style.display = 'block';
+            });
+            findMap.addListener("zoom_changed", () => {
+                document.getElementById('search-area-btn').style.display = 'block';
+            });
+
+            // Geolocation
             if (navigator.geolocation) {
                 navigator.geolocation.getCurrentPosition(
                     (position) => {
-                        const pos = {
-                            lat: position.coords.latitude,
-                            lng: position.coords.longitude,
-                        };
-                        map.setCenter(pos);
+                        const pos = { lat: position.coords.latitude, lng: position.coords.longitude };
+                        reportMap.setCenter(pos);
+                        findMap.setCenter(pos);
                     }
                 );
             }
         }
 
-        function placeMarkerAndPanTo(latLng) {
-            if (marker) {
-                marker.setPosition(latLng);
+        // Global init for callback
+        window.initMap = initMaps;
+
+        function switchTab(mode) {
+            currentMode = mode;
+
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelector(`button[onclick="switchTab('${mode}')"]`).classList.add('active');
+
+            document.querySelectorAll('.section-content').forEach(el => el.classList.remove('active'));
+            document.getElementById(`${mode}-section`).classList.add('active');
+
+            if (mode === 'find') {
+                // Resize map trigger because it was hidden
+                if (findMap) google.maps.event.trigger(findMap, "resize");
+                if (document.getElementById('sightings-list').children.length === 0) {
+                    searchCurrentArea(); // Initial load
+                }
+            }
+        }
+
+        function placeReportMarker(latLng) {
+            if (reportMarker) {
+                reportMarker.setPosition(latLng);
             } else {
-                marker = new google.maps.Marker({
+                reportMarker = new google.maps.Marker({
                     position: latLng,
-                    map: map,
-                    animation: google.maps.Animation.DROP
+                    map: reportMap,
+                    animation: google.maps.Animation.DROP,
+                    icon: 'https://maps.google.com/mapfiles/ms/icons/red-dot.png'
                 });
             }
-            map.panTo(latLng);
-
+            reportMap.panTo(latLng);
             document.getElementById('lat').value = latLng.lat();
             document.getElementById('lng').value = latLng.lng();
         }
 
-        // Set default date to today
+        // --- Find Logic ---
+
+        function searchCurrentArea() {
+            document.getElementById('search-area-btn').style.display = 'none';
+            resetAndFetch();
+        }
+
+        function resetAndFetch() {
+            document.getElementById('sightings-list').innerHTML = '';
+            clearSightingMarkers();
+            nextCursor = null;
+            fetchSightings();
+        }
+
+        async function fetchSightings() {
+            if (isLoading) return;
+            isLoading = true;
+
+            const listContainer = document.getElementById('sightings-list');
+            // Show loading if empty
+            if (listContainer.children.length === 0) {
+                listContainer.innerHTML = '<div style="text-align:center; padding:20px; color:#888;">Scanning area...</div>';
+            }
+
+            try {
+                // Params
+                const bounds = findMap.getBounds();
+                const rangeVal = document.getElementById('filter-date-range').value;
+
+                const params = new URLSearchParams();
+                if (bounds) {
+                    const ne = bounds.getNorthEast();
+                    const sw = bounds.getSouthWest();
+                    params.append('north', ne.lat());
+                    params.append('south', sw.lat());
+                    params.append('east', ne.lng());
+                    params.append('west', sw.lng());
+                }
+
+                // Calculate Date Range
+                if (rangeVal !== 'all') {
+                    const days = parseInt(rangeVal);
+                    const startDate = new Date();
+                    startDate.setDate(startDate.getDate() - days);
+                    // Format YYYY-MM-DD
+                    const startStr = startDate.toISOString().split('T')[0];
+                    params.append('start_date', startStr);
+                }
+
+                if (nextCursor) params.append('cursor', nextCursor);
+
+                const response = await fetch(`/api/sightings?${params.toString()}`);
+                const result = await response.json();
+
+                if (listContainer.innerHTML.includes('Scanning area...')) {
+                    listContainer.innerHTML = '';
+                }
+
+                if (result.error) {
+                    showNotification('Error loading sightings', 'error');
+                    return;
+                }
+
+                // Process Data
+                const sightings = result.data || [];
+                nextCursor = result.next_cursor;
+
+                if (sightings.length === 0 && listContainer.children.length === 0) {
+                    listContainer.innerHTML = '<div style="text-align:center; padding:20px;">No dogs found in this area/date range.</div>';
+                }
+
+                sightings.forEach(sighting => {
+                    renderSighting(sighting);
+                });
+
+                // Pagination Btn
+                const loadMoreBtn = document.getElementById('load-more-btn');
+                if (nextCursor) {
+                    loadMoreBtn.classList.remove('hidden');
+                } else {
+                    loadMoreBtn.classList.add('hidden');
+                }
+
+            } catch (error) {
+                console.error("Fetch error:", error);
+                showNotification('Network error', 'error');
+            } finally {
+                isLoading = false;
+            }
+        }
+
+        function loadMore() {
+            fetchSightings();
+        }
+
+        function renderSighting(sighting) {
+            const listContainer = document.getElementById('sightings-list');
+
+            // 1. List Card
+            const card = document.createElement('div');
+            card.className = 'sighting-card';
+
+            const locText = sighting.location_details ?
+                (sighting.location_details.city || sighting.location_details.region || 'Unknown')
+                : 'Unknown';
+
+            // Highlight marker on hover
+            card.onmouseenter = () => highlightMarker(sighting.id, true);
+            card.onmouseleave = () => highlightMarker(sighting.id, false);
+            card.onclick = () => {
+                findMap.panTo(sighting.location);
+                findMap.setZoom(15);
+                infoWindow.open(findMap, marker);
+            };
+
+            card.innerHTML = `
+                <img src="${sighting.image_url.startsWith('gs://') ? '#' : sighting.image_url}" 
+                     onerror="this.src='/static/placeholder.png'" alt="Dog">
+                <div class="sighting-info">
+                    <div class="sighting-loc">${locText}</div>
+                    <div class="sighting-date">Sighted: ${sighting.sighting_date}</div>
+                    ${sighting.comments ? `<div style="font-size:0.8rem; color:#666; margin-top:4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${sighting.comments}</div>` : ''}
+                </div>
+            `;
+            listContainer.appendChild(card);
+
+            // 2. Map Marker
+            const marker = new google.maps.Marker({
+                position: sighting.location,
+                map: findMap,
+                title: locText,
+                icon: 'https://maps.google.com/mapfiles/ms/icons/blue-dot.png'
+            });
+
+            // Info Window
+            const commentHtml = sighting.comments ?
+                `<div style="margin-top:8px; padding-top:8px; border-top:1px solid #eee; font-size:0.9rem; color:#333; font-style:italic;">"${sighting.comments}"</div>` : '';
+
+            const infoWindow = new google.maps.InfoWindow({
+                content: `
+                    <div style="width:240px">
+                        <img src="${sighting.image_url.startsWith('gs://') ? '#' : sighting.image_url}" 
+                             onerror="this.src='/static/placeholder.png'" style="width:100%;height:140px;object-fit:cover;border-radius:6px;margin-bottom:8px;">
+                        <div style="font-weight:600; font-size:1rem; margin-bottom:2px;">${locText}</div>
+                        <div style="color:#666; font-size:0.85rem;">Sighted: ${sighting.sighting_date}</div>
+                        ${commentHtml}
+                    </div>
+                `
+            });
+
+            marker.addListener('click', () => {
+                infoWindow.open(findMap, marker);
+            });
+
+            // Store ref for highlighting
+            sightingMarkers.push({ id: sighting.id, marker: marker });
+        }
+
+        function clearSightingMarkers() {
+            sightingMarkers.forEach(item => item.marker.setMap(null));
+            sightingMarkers = [];
+        }
+
+        function highlightMarker(id, active) {
+            const item = sightingMarkers.find(x => x.id === id);
+            if (item) {
+                if (active) {
+                    item.marker.setAnimation(google.maps.Animation.BOUNCE);
+                    // Stop bounce after a short time
+                    setTimeout(() => item.marker.setAnimation(null), 700);
+                } else {
+                    item.marker.setAnimation(null);
+                }
+            }
+        }
+
+        // --- Utils ---
+
+        // Set default report date
         document.getElementById('date').valueAsDate = new Date();
 
-        // File input handling
+        // File input
         document.getElementById('image').addEventListener('change', function (e) {
             const fileName = e.target.files[0] ? e.target.files[0].name : "No file chosen";
             document.getElementById('file-name').textContent = fileName;
         });
 
-        // Form Submission
+        // Report Form
         document.getElementById('sighting-form').addEventListener('submit', async function (e) {
             e.preventDefault();
-
             const lat = document.getElementById('lat').value;
             const lng = document.getElementById('lng').value;
+            const date = document.getElementById('date').value;
+            const comments = document.getElementById('comments').value;
+            const imageFile = document.getElementById('image').files[0];
 
             if (!lat || !lng) {
                 showNotification('Please select a location on the map.', 'error');
                 return;
             }
 
+            if (!imageFile) {
+                showNotification('Please upload an image.', 'error');
+                return;
+            }
+
             const submitBtn = document.getElementById('submit-btn');
             submitBtn.disabled = true;
             submitBtn.textContent = 'Submitting...';
-
-            const formData = new FormData(this);
+            const formData = new FormData();
+            formData.append('lat', lat);
+            formData.append('lng', lng);
+            formData.append('date', date);
+            formData.append('comments', comments);
+            formData.append('image', imageFile);
 
             try {
-                const response = await fetch('/submit', {
-                    method: 'POST',
-                    body: formData
-                });
-
+                const response = await fetch('/submit', { method: 'POST', body: formData });
                 const result = await response.json();
-
                 if (response.ok) {
                     showNotification('Report submitted successfully!', 'success');
                     this.reset();
                     document.getElementById('file-name').textContent = "No file chosen";
-                    if (marker) marker.setMap(null);
-                    marker = null;
+                    if (reportMarker) reportMarker.setMap(null);
+                    reportMarker = null;
                     document.getElementById('date').valueAsDate = new Date();
                 } else {
-                    showNotification(result.error || 'An error occurred.', 'error');
+                    showNotification(result.error || 'Error', 'error');
                 }
             } catch (error) {
-                showNotification('Network error. Please try again.', 'error');
+                showNotification('Network error.', 'error');
             } finally {
                 submitBtn.disabled = false;
                 submitBtn.textContent = 'Submit Report';
@@ -226,13 +738,10 @@
             notification.textContent = message;
             notification.className = `notification ${type}`;
             notification.classList.remove('hidden');
-
-            setTimeout(() => {
-                notification.classList.add('hidden');
-            }, 5000);
+            setTimeout(() => { notification.classList.add('hidden'); }, 5000);
         }
     </script>
-    <script src="https://maps.googleapis.com/maps/api/js?key={{ maps_api_key }}&callback=initMap&loading=async" async
+    <script src="https://maps.googleapis.com/maps/api/js?key={{ maps_api_key }}&callback=initMaps&loading=async" async
         defer></script>
 </body>
 

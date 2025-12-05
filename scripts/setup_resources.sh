@@ -45,6 +45,14 @@ else
     echo "✅ Bucket created."
 fi
 
+# 1b. Make Bucket Public (User Request for Reliability)
+echo "Ensuring Bucket is Public..."
+gcloud storage buckets add-iam-policy-binding "gs://$BUCKET_NAME" \
+    --member="allUsers" \
+    --role="roles/storage.objectViewer" \
+    --project="$GOOGLE_CLOUD_PROJECT"
+echo "✅ Bucket is now public."
+
 # 2. Create Pub/Sub Schema
 echo ""
 echo "[2/5] Checking Pub/Sub Schema..."
@@ -112,6 +120,47 @@ else
         --project="$GOOGLE_CLOUD_PROJECT"
     echo "✅ Subscription created."
 fi
+
+# 6. Create Firestore Database (Native Mode)
+echo ""
+echo "[6/6] Checking Firestore Database..."
+# Check if default database exists
+if gcloud firestore databases list --project="$GOOGLE_CLOUD_PROJECT" --format="value(name)" | grep -q "projects/$GOOGLE_CLOUD_PROJECT/databases/(default)"; then
+    echo "✅ Firestore database '(default)' already exists."
+else
+    echo "Creating Firestore database '(default)'..."
+    gcloud firestore databases create --location="$REGION" --type=firestore-native --project="$GOOGLE_CLOUD_PROJECT"
+    echo "✅ Firestore database created."
+fi
+
+# 7. Create Firestore Composite Index
+echo ""
+echo "[7/7] Checking Firestore Indexes..."
+# We try to create it. If it exists, it returns a message but exits 0 or similar (or we can ignore "already exists" error).
+# The most robust way is to just run it and catch failure if it's "Already exists", but gcloud might fail hard.
+# Let's check if we can list it, but list parsing is annoying. 
+# We'll just run 'create' which is idempotent-ish enough or we suppress error if it says "already exists".
+echo "Ensuring Composite Index exists..."
+gcloud firestore indexes composite create \
+    --collection-group=sightings \
+    --field-config field-path=sighting_date,order=descending \
+    --field-config field-path=timestamp,order=descending \
+    --project="$GOOGLE_CLOUD_PROJECT" \
+    --quiet || echo "⚠️ Index creation might have failed or already exists. Check Console if search fails."
+
+# 8. Grant Service Account Token Creator Role (For Signed URLs)
+echo ""
+echo "[8/8] Checking IAM Permissions..."
+PROJECT_NUMBER=$(gcloud projects describe "$GOOGLE_CLOUD_PROJECT" --format="value(projectNumber)")
+SERVICE_ACCOUNT="${PROJECT_NUMBER}-compute@developer.gserviceaccount.com"
+
+echo "Granting 'Service Account Token Creator' to $SERVICE_ACCOUNT..."
+gcloud projects add-iam-policy-binding "$GOOGLE_CLOUD_PROJECT" \
+    --member="serviceAccount:$SERVICE_ACCOUNT" \
+    --role="roles/iam.serviceAccountTokenCreator" \
+    --condition=None \
+    --quiet > /dev/null 2>&1
+echo "✅ IAM role granted."
 
 echo ""
 echo "=================================================="

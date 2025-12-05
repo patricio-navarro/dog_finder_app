@@ -43,7 +43,7 @@ if [[ ! $REPLY =~ ^[Yy]$ ]]; then
 fi
 
 echo ""
-echo "[1/7] Deleting Cloud Run Service..."
+echo "[1/8] Deleting Cloud Run Service..."
 if gcloud run services describe "$SERVICE_NAME" --region="$REGION" --project="$GOOGLE_CLOUD_PROJECT" > /dev/null 2>&1; then
     gcloud run services delete "$SERVICE_NAME" --region="$REGION" --project="$GOOGLE_CLOUD_PROJECT" --quiet
     echo "✅ Service deleted."
@@ -52,7 +52,7 @@ else
 fi
 
 echo ""
-echo "[2/7] Deleting Pub/Sub Subscription..."
+echo "[2/8] Deleting Pub/Sub Subscription..."
 if gcloud pubsub subscriptions describe "$SUBSCRIPTION_ID" --project="$GOOGLE_CLOUD_PROJECT" > /dev/null 2>&1; then
     gcloud pubsub subscriptions delete "$SUBSCRIPTION_ID" --project="$GOOGLE_CLOUD_PROJECT" --quiet
     echo "✅ Subscription deleted."
@@ -61,7 +61,7 @@ else
 fi
 
 echo ""
-echo "[3/7] Deleting Pub/Sub Topic..."
+echo "[3/8] Deleting Pub/Sub Topic..."
 if gcloud pubsub topics describe "$TOPIC_ID" --project="$GOOGLE_CLOUD_PROJECT" > /dev/null 2>&1; then
     gcloud pubsub topics delete "$TOPIC_ID" --project="$GOOGLE_CLOUD_PROJECT" --quiet
     echo "✅ Topic deleted."
@@ -70,7 +70,7 @@ else
 fi
 
 echo ""
-echo "[4/7] Deleting Pub/Sub Schema..."
+echo "[4/8] Deleting Pub/Sub Schema..."
 if gcloud pubsub schemas describe "$SCHEMA_ID" --project="$GOOGLE_CLOUD_PROJECT" > /dev/null 2>&1; then
     gcloud pubsub schemas delete "$SCHEMA_ID" --project="$GOOGLE_CLOUD_PROJECT" --quiet
     echo "✅ Schema deleted."
@@ -79,7 +79,7 @@ else
 fi
 
 echo ""
-echo "[5/7] Deleting BigQuery Table..."
+echo "[5/8] Deleting BigQuery Table..."
 if bq show --project_id="$GOOGLE_CLOUD_PROJECT" "${BIGQUERY_DATASET}.${BIGQUERY_TABLE}" > /dev/null 2>&1; then
     bq rm -f -t "${GOOGLE_CLOUD_PROJECT}:${BIGQUERY_DATASET}.${BIGQUERY_TABLE}"
     echo "✅ Table deleted."
@@ -88,7 +88,7 @@ else
 fi
 
 echo ""
-echo "[6/7] Deleting BigQuery Dataset..."
+echo "[6/8] Deleting BigQuery Dataset..."
 if bq show --project_id="$GOOGLE_CLOUD_PROJECT" "$BIGQUERY_DATASET" > /dev/null 2>&1; then
     bq rm -f -d "${GOOGLE_CLOUD_PROJECT}:${BIGQUERY_DATASET}"
     echo "✅ Dataset deleted."
@@ -97,12 +97,21 @@ else
 fi
 
 echo ""
-echo "[7/7] Deleting GCS Bucket..."
+echo "[7/8] Deleting GCS Bucket..."
 if gcloud storage buckets describe "gs://$BUCKET_NAME" --project="$GOOGLE_CLOUD_PROJECT" > /dev/null 2>&1; then
     gcloud storage rm --recursive "gs://$BUCKET_NAME" --project="$GOOGLE_CLOUD_PROJECT" --quiet
     echo "✅ Bucket deleted."
 else
     echo "⚠️  Bucket 'gs://$BUCKET_NAME' not found."
+fi
+
+echo ""
+echo "[8/8] Deleting Firestore Database..."
+if gcloud firestore databases list --project="$GOOGLE_CLOUD_PROJECT" --format="value(name)" | grep -q "projects/$GOOGLE_CLOUD_PROJECT/databases/(default)"; then
+    gcloud firestore databases delete --database="(default)" --project="$GOOGLE_CLOUD_PROJECT" --quiet
+    echo "✅ Firestore database deleted."
+else
+    echo "⚠️  Firestore database '(default)' not found."
 fi
 
 echo ""

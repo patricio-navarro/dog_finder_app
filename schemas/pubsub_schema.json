@@ -45,6 +45,11 @@
             "name": "image_url",
             "type": "string",
             "doc": "GCS URL of the uploaded image"
+        },
+        {
+            "name": "comments",
+            "type": "string",
+            "doc": "Additional comments about the sighting"
         }
     ]
 }

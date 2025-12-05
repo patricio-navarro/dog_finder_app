@@ -51,6 +51,12 @@
         "description": "GCS URL of the uploaded image"
     },
     {
+        "name": "comments",
+        "type": "STRING",
+        "mode": "NULLABLE",
+        "description": "Additional comments about the sighting"
+    },
+    {
         "name": "subscription_name",
         "type": "STRING",
         "mode": "NULLABLE",

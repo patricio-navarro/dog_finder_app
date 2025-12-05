@@ -14,10 +14,11 @@ def client():
     with main.app.test_client() as client:
         yield client
 
+@patch('main.firestore_client')
 @patch('main.storage_client')
 @patch('main.pubsub_publisher')
 @patch('main.gmaps')
-def test_submit_dog_success(mock_gmaps, mock_pubsub, mock_storage, client):
+def test_submit_dog_success(mock_gmaps, mock_pubsub, mock_storage, mock_firestore, client):
     # Setup mocks
     mock_bucket = MagicMock()
     mock_blob = MagicMock()
@@ -43,6 +44,7 @@ def test_submit_dog_success(mock_gmaps, mock_pubsub, mock_storage, client):
         'lat': '37.7749',
         'lng': '-122.4194',
         'date': '2023-10-27',
+        'comments': 'Found near the park',
         'image': (io.BytesIO(b'fake_image_bytes'), 'dog.jpg', 'image/jpeg')
     }
 
@@ -58,7 +60,124 @@ def test_submit_dog_success(mock_gmaps, mock_pubsub, mock_storage, client):
     mock_storage.bucket.assert_called()
     mock_blob.upload_from_file.assert_called()
     mock_pubsub.publish.assert_called()
+    mock_firestore.collection.assert_called_with("sightings")
     mock_gmaps.reverse_geocode.assert_called_with(('37.7749', '-122.4194'))
+
+@patch('main.firestore_client')
+def test_get_sightings(mock_firestore, client):
+    # Mock data
+    mock_doc = MagicMock()
+    mock_doc.id = "doc123"
+    mock_doc.to_dict.return_value = {
+        "sighting_date": "2023-10-27",
+        "image_url": "http://image.url",
+        "location": MagicMock(latitude=37.77, longitude=-122.41),
+        "location_details": {"city": "SF"},
+        "comments": "Friendly dog"
+    }
+    
+    mock_stream = MagicMock()
+    mock_stream.stream.return_value = [mock_doc]
+    
+    # Chain: client.collection().order_by().order_by().limit().stream()
+    mock_firestore.collection.return_value.order_by.return_value.order_by.return_value.limit.return_value = mock_stream
+
+    response = client.get('/api/sightings')
+    
+    assert response.status_code == 200
+    assert response.status_code == 200
+    json_data = response.get_json()
+    data = json_data['data']
+    assert len(data) == 1
+    assert data[0]['id'] == 'doc123'
+    assert data[0]['location']['lat'] == 37.77
+    assert data[0]['location_details']['city'] == 'SF'
+    assert data[0]['comments'] == 'Friendly dog'
+
+@patch('main.storage_client')
+@patch('main.firestore_client')
+def test_get_sightings_signed_url(mock_firestore, mock_storage, client):
+    # Setup Storage Mock
+    mock_bucket = MagicMock()
+    mock_blob = MagicMock()
+    mock_storage.bucket.return_value = mock_bucket
+    mock_bucket.blob.return_value = mock_blob
+    mock_blob.generate_signed_url.return_value = "https://signed.url/dog.jpg"
+
+    # Mock Firestore Data with GS URL
+    mock_doc = MagicMock()
+    mock_doc.id = "doc123"
+    mock_doc.to_dict.return_value = {
+        "sighting_date": "2023-10-27",
+        "image_url": "gs://analytics-presentation-poc-lost-dogs/dog_123.jpg",
+        "location": MagicMock(latitude=37.77, longitude=-122.41),
+        "location_details": {}
+    }
+    
+    mock_stream = MagicMock()
+    mock_stream.stream.return_value = [mock_doc]
+    mock_firestore.collection.return_value.order_by.return_value.order_by.return_value.limit.return_value = mock_stream
+
+    # Make request
+    response = client.get('/api/sightings')
+    
+    assert response.status_code == 200
+    json_data = response.get_json()
+    data = json_data['data']
+    
+    # Assertions
+    assert len(data) == 1
+    assert data[0]['image_url'] == "https://signed.url/dog.jpg"
+    
+    # Verify Storage calls
+    mock_storage.bucket.assert_called_with("analytics-presentation-poc-lost-dogs")
+    mock_bucket.blob.assert_called_with("dog_123.jpg")
+    mock_blob.generate_signed_url.assert_called()
+
+@patch('main.firestore_client')
+def test_get_sightings_with_bounds(mock_firestore, client):
+    # Mock data: One inside SF bounds, one outside (e.g., NY)
+    doc_in = MagicMock()
+    doc_in.id = "in_sf"
+    doc_in.to_dict.return_value = {
+        "sighting_date": "2023-10-27",
+        "location": MagicMock(latitude=37.77, longitude=-122.42), # SF
+        "location_details": {"city": "San Francisco"}
+    }
+    
+    doc_out = MagicMock()
+    doc_out.id = "out_sf"
+    doc_out.to_dict.return_value = {
+        "sighting_date": "2023-10-27",
+        "location": MagicMock(latitude=40.71, longitude=-74.00), # NY
+        "location_details": {"city": "New York"}
+    }
+    
+    # Mock stream to return both
+    mock_stream = MagicMock()
+    mock_stream.stream.return_value = [doc_in, doc_out]
+    
+    # Chain
+    mock_query = MagicMock()
+    mock_query.limit.return_value = mock_stream
+    mock_firestore.collection.return_value.order_by.return_value.order_by.return_value = mock_query
+
+    # Request with SF Bounds (approx)
+    # North: 37.81, South: 37.70, East: -122.35, West: -122.50
+    params = {
+        'north': 37.81,
+        'south': 37.70,
+        'east': -122.35,
+        'west': -122.50
+    }
+    
+    response = client.get('/api/sightings', query_string=params)
+    assert response.status_code == 200
+    data = response.get_json()
+    
+    # Should only have 1 result (the SF one)
+    assert len(data['data']) == 1
+    assert data['data'][0]['id'] == 'in_sf'
 
 def test_index_page(client):
     response = client.get('/')
