@@ -1,8 +1,13 @@
 #!/bin/bash
 
 # Load environment variables
-if [ -f .env ]; then
-    source .env
+# Determine script location and project root
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+PROJECT_ROOT="$DIR/.."
+
+# Load environment variables
+if [ -f "$PROJECT_ROOT/.env" ]; then
+    source "$PROJECT_ROOT/.env"
 else
     echo "❌ .env file not found!"
     exit 1

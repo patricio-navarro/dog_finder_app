@@ -59,7 +59,7 @@ REGION=us-central1
 Before deploying, you can use the helper script to create the GCS Bucket and Pub/Sub Topic automatically:
 
 ```bash
-./setup_resources.sh
+./scripts/setup_resources.sh
 ```
 
 ## ☁️ Deployment
@@ -73,7 +73,8 @@ A helper script `deploy.sh` is provided to build and deploy to Cloud Run.
 
 2.  **Run the deploy script**:
     ```bash
-    ./deploy.sh
+```bash
+    ./scripts/deploy.sh
     ```
 
 This will:

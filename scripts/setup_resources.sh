@@ -2,8 +2,13 @@
 set -e
 
 # Load environment variables
-if [ -f .env ]; then
-    source .env
+# Determine script location and project root
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+PROJECT_ROOT="$DIR/.."
+
+# Load environment variables
+if [ -f "$PROJECT_ROOT/.env" ]; then
+    source "$PROJECT_ROOT/.env"
 else
     echo "❌ .env file not found!"
     exit 1
@@ -49,7 +54,7 @@ else
     echo "Creating schema '$SCHEMA_ID'..."
     gcloud pubsub schemas create "$SCHEMA_ID" \
         --type=avro \
-        --definition-file=pubsub_schema.json \
+        --definition-file="$PROJECT_ROOT/schemas/pubsub_schema.json" \
         --project="$GOOGLE_CLOUD_PROJECT"
     echo "✅ Schema created."
 fi
@@ -73,7 +78,7 @@ else
         --time_partitioning_field sighting_date \
         --time_partitioning_type DAY \
         "${GOOGLE_CLOUD_PROJECT}:${BIGQUERY_DATASET}.${BIGQUERY_TABLE}" \
-        bigquery_schema.json
+        "$PROJECT_ROOT/schemas/bigquery_schema.json"
     echo "✅ Table created."
 fi
 

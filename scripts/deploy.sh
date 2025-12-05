@@ -2,8 +2,13 @@
 set -e
 
 # Load environment variables
-if [ -f .env ]; then
-    source .env
+# Determine script location and project root
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+PROJECT_ROOT="$DIR/.."
+
+# Load environment variables
+if [ -f "$PROJECT_ROOT/.env" ]; then
+    source "$PROJECT_ROOT/.env"
 else
     echo ".env file not found!"
     exit 1
@@ -22,7 +27,8 @@ echo "=================================================="
 
 # Build and Submit Image to Container Registry (or Artifact Registry)
 echo "[1/2] Building and submitting image..."
-gcloud builds submit --tag $IMAGE_NAME --project "$GOOGLE_CLOUD_PROJECT" .
+# Run build relative to project root
+gcloud builds submit --tag $IMAGE_NAME --project "$GOOGLE_CLOUD_PROJECT" "$PROJECT_ROOT"
 
 # Deploy to Cloud Run
 echo "[2/2] Deploying to Cloud Run..."
