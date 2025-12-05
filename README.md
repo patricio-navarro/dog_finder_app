@@ -73,7 +73,6 @@ A helper script `deploy.sh` is provided to build and deploy to Cloud Run.
 
 2.  **Run the deploy script**:
     ```bash
-```bash
     ./scripts/deploy.sh
     ```
 
