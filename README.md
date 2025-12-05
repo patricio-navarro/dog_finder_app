@@ -10,6 +10,8 @@ This application allows users to report lost dog sightings. It captures the loca
 - **Deployment**: Dockerized and ready for Cloud Run.
 
 ## 🏗️ System Architecture
+![System Architecture Sketch](static/architecture_sketch.png)
+
 ```mermaid
 graph TD
     User([User]) -->|Submits Form| WebApp[Flask Web App]
