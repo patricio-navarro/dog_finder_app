@@ -1,0 +1,77 @@
+[
+    {
+        "name": "timestamp",
+        "type": "TIMESTAMP",
+        "mode": "REQUIRED",
+        "description": "Timestamp of the report"
+    },
+    {
+        "name": "sighting_date",
+        "type": "DATE",
+        "mode": "REQUIRED",
+        "description": "Date when the dog was sighted"
+    },
+    {
+        "name": "location",
+        "type": "RECORD",
+        "mode": "REQUIRED",
+        "description": "Location details",
+        "fields": [
+            {
+                "name": "latitude",
+                "type": "FLOAT",
+                "mode": "REQUIRED"
+            },
+            {
+                "name": "longitude",
+                "type": "FLOAT",
+                "mode": "REQUIRED"
+            },
+            {
+                "name": "city",
+                "type": "STRING",
+                "mode": "NULLABLE"
+            },
+            {
+                "name": "region",
+                "type": "STRING",
+                "mode": "NULLABLE"
+            },
+            {
+                "name": "country",
+                "type": "STRING",
+                "mode": "NULLABLE"
+            }
+        ]
+    },
+    {
+        "name": "image_url",
+        "type": "STRING",
+        "mode": "REQUIRED",
+        "description": "GCS URL of the uploaded image"
+    },
+    {
+        "name": "subscription_name",
+        "type": "STRING",
+        "mode": "NULLABLE",
+        "description": "Metadata: Subscription Name"
+    },
+    {
+        "name": "message_id",
+        "type": "STRING",
+        "mode": "NULLABLE",
+        "description": "Metadata: Message ID"
+    },
+    {
+        "name": "publish_time",
+        "type": "TIMESTAMP",
+        "mode": "NULLABLE",
+        "description": "Metadata: Publish Time"
+    },
+    {
+        "name": "attributes",
+        "type": "STRING",
+        "mode": "NULLABLE",
+        "description": "Metadata: Attributes"
+    }
+]

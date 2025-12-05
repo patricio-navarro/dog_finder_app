@@ -1,0 +1,50 @@
+{
+    "type": "record",
+    "name": "Avro",
+    "fields": [
+        {
+            "name": "timestamp",
+            "type": "string",
+            "doc": "ISO 8601 timestamp of when the record was created"
+        },
+        {
+            "name": "sighting_date",
+            "type": "string",
+            "doc": "Date of the sighting (YYYY-MM-DD)"
+        },
+        {
+            "name": "location",
+            "type": {
+                "type": "record",
+                "name": "location_details",
+                "fields": [
+                    {
+                        "name": "latitude",
+                        "type": "double"
+                    },
+                    {
+                        "name": "longitude",
+                        "type": "double"
+                    },
+                    {
+                        "name": "city",
+                        "type": "string"
+                    },
+                    {
+                        "name": "region",
+                        "type": "string"
+                    },
+                    {
+                        "name": "country",
+                        "type": "string"
+                    }
+                ]
+            }
+        },
+        {
+            "name": "image_url",
+            "type": "string",
+            "doc": "GCS URL of the uploaded image"
+        }
+    ]
+}
