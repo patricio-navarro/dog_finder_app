@@ -12,25 +12,7 @@ This application allows users to report lost dog sightings. It captures the loca
 ## 🏗️ System Architecture
 ![System Architecture Sketch](static/architecture_sketch.png)
 
-```mermaid
-graph TD
-    User([User]) -->|Submits Form| WebApp[Flask Web App]
-    WebApp -->|Reverse Geocoding| MapsAPI[Google Maps API]
-    WebApp -->|Upload Image| GCS[Cloud Storage]
-    WebApp -->|Publish Event| PubSub[Pub/Sub Topic]
-    
-    subgraph GCP[Google Cloud Platform]
-        MapsAPI
-        GCS
-        PubSub
-        BigQuery
-    end
 
-    PubSub -->|Subscription| BigQuery[BigQuery Table]
-
-    style WebApp fill:#f9f,stroke:#333,stroke-width:2px
-    style User fill:#fff,stroke:#333,stroke-width:2px
-```
 
 ## 🛠️ Prerequisites
 - Google Cloud Project with Billing enabled.
