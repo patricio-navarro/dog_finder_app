@@ -1,5 +1,5 @@
 from flask import Flask
-from .services import init_services
+from .gcp_clients import init_services
 from .routes import main_bp
 
 def create_app():

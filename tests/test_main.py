@@ -14,10 +14,10 @@ def client():
     with main.app.test_client() as client:
         yield client
 
-@patch('app.services.firestore_client')
-@patch('app.services.storage_client')
-@patch('app.services.pubsub_publisher')
-@patch('app.services.gmaps')
+@patch('app.gcp_clients.firestore_client')
+@patch('app.gcp_clients.storage_client')
+@patch('app.gcp_clients.pubsub_publisher')
+@patch('app.gcp_clients.gmaps')
 def test_submit_dog_success(mock_gmaps, mock_pubsub, mock_storage, mock_firestore, client):
     # Setup mocks
     mock_bucket = MagicMock()
@@ -76,8 +76,8 @@ def test_submit_dog_success(mock_gmaps, mock_pubsub, mock_storage, mock_firestor
 
     mock_gmaps.reverse_geocode.assert_called_with(('37.7749', '-122.4194'))
 
-@patch('app.services.firestore_client')
-def test_get_sightings(mock_firestore, client):
+@patch('app.gcp_clients.firestore_client')
+def test_get_sightings_success(mock_firestore, client):
     # Mock data
     mock_doc = MagicMock()
     mock_doc.id = "doc123"
@@ -107,8 +107,8 @@ def test_get_sightings(mock_firestore, client):
     assert data[0]['location_details']['city'] == 'SF'
     assert data[0]['comments'] == 'Friendly dog'
 
-@patch('app.services.storage_client')
-@patch('app.services.firestore_client')
+@patch('app.gcp_clients.storage_client')
+@patch('app.gcp_clients.firestore_client')
 def test_get_sightings_public_url(mock_firestore, mock_storage, client):
     # Setup Storage Mock (Not actually called for public URLs but we patch it to mimic env)
     
@@ -138,8 +138,8 @@ def test_get_sightings_public_url(mock_firestore, mock_storage, client):
     # Expect Public URL
     assert data[0]['image_url'] == "https://storage.googleapis.com/analytics-presentation-poc-lost-dogs/dog_123.jpg"
 
-@patch('app.services.firestore_client')
-def test_get_sightings_with_bounds(mock_firestore, client):
+@patch('app.gcp_clients.firestore_client')
+def test_get_sightings_with_filters(mock_firestore, client):
     # Mock data: One inside SF bounds, one outside (e.g., NY)
     doc_in = MagicMock()
     doc_in.id = "in_sf"
