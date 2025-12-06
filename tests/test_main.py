@@ -14,10 +14,10 @@ def client():
     with main.app.test_client() as client:
         yield client
 
-@patch('main.firestore_client')
-@patch('main.storage_client')
-@patch('main.pubsub_publisher')
-@patch('main.gmaps')
+@patch('app.services.firestore_client')
+@patch('app.services.storage_client')
+@patch('app.services.pubsub_publisher')
+@patch('app.services.gmaps')
 def test_submit_dog_success(mock_gmaps, mock_pubsub, mock_storage, mock_firestore, client):
     # Setup mocks
     mock_bucket = MagicMock()
@@ -60,10 +60,23 @@ def test_submit_dog_success(mock_gmaps, mock_pubsub, mock_storage, mock_firestor
     mock_storage.bucket.assert_called()
     mock_blob.upload_from_file.assert_called()
     mock_pubsub.publish.assert_called()
+    # Verify Pub/Sub message content
+    pubsub_args, _ = mock_pubsub.publish.call_args
+    # pubsub_args[0] is topic, pubsub_args[1] is message bytes
+    import json
+    msg_json = json.loads(pubsub_args[1].decode('utf-8'))
+    assert msg_json['user_id'] == 'mock_user_123'
+
     mock_firestore.collection.assert_called_with("sightings")
+    
+    # Verify user_id in firestore set call
+    doc_ref_mock = mock_firestore.collection.return_value.document.return_value
+    args, _ = doc_ref_mock.set.call_args
+    assert args[0]['user_id'] == 'mock_user_123'
+
     mock_gmaps.reverse_geocode.assert_called_with(('37.7749', '-122.4194'))
 
-@patch('main.firestore_client')
+@patch('app.services.firestore_client')
 def test_get_sightings(mock_firestore, client):
     # Mock data
     mock_doc = MagicMock()
@@ -94,16 +107,11 @@ def test_get_sightings(mock_firestore, client):
     assert data[0]['location_details']['city'] == 'SF'
     assert data[0]['comments'] == 'Friendly dog'
 
-@patch('main.storage_client')
-@patch('main.firestore_client')
-def test_get_sightings_signed_url(mock_firestore, mock_storage, client):
-    # Setup Storage Mock
-    mock_bucket = MagicMock()
-    mock_blob = MagicMock()
-    mock_storage.bucket.return_value = mock_bucket
-    mock_bucket.blob.return_value = mock_blob
-    mock_blob.generate_signed_url.return_value = "https://signed.url/dog.jpg"
-
+@patch('app.services.storage_client')
+@patch('app.services.firestore_client')
+def test_get_sightings_public_url(mock_firestore, mock_storage, client):
+    # Setup Storage Mock (Not actually called for public URLs but we patch it to mimic env)
+    
     # Mock Firestore Data with GS URL
     mock_doc = MagicMock()
     mock_doc.id = "doc123"
@@ -127,14 +135,10 @@ def test_get_sightings_signed_url(mock_firestore, mock_storage, client):
     
     # Assertions
     assert len(data) == 1
-    assert data[0]['image_url'] == "https://signed.url/dog.jpg"
-    
-    # Verify Storage calls
-    mock_storage.bucket.assert_called_with("analytics-presentation-poc-lost-dogs")
-    mock_bucket.blob.assert_called_with("dog_123.jpg")
-    mock_blob.generate_signed_url.assert_called()
+    # Expect Public URL
+    assert data[0]['image_url'] == "https://storage.googleapis.com/analytics-presentation-poc-lost-dogs/dog_123.jpg"
 
-@patch('main.firestore_client')
+@patch('app.services.firestore_client')
 def test_get_sightings_with_bounds(mock_firestore, client):
     # Mock data: One inside SF bounds, one outside (e.g., NY)
     doc_in = MagicMock()
