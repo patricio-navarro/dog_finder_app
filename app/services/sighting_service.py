@@ -121,7 +121,7 @@ class SightingService:
             "next_cursor": next_cursor
         }
     
-    def _build_query(self, filters: dict):
+    def _build_query(self, filters: dict) -> firestore.Query:
         """
         Build Firestore query from filters.
         
@@ -129,22 +129,39 @@ class SightingService:
             filters: Dictionary with optional 'start_date', 'end_date' keys
             
         Returns:
-            Query: Firestore query object
+            firestore.Query: Ordered and filtered Firestore query object
         """
         query = self.firestore.collection(self.collection_name)
         query = query.order_by("sighting_date", direction=firestore.Query.DESCENDING)
         query = query.order_by("timestamp", direction=firestore.Query.DESCENDING)
         
-        if 'start_date' in filters and filters['start_date']:
-            query = query.where("sighting_date", ">=", filters['start_date'])
-        
-        if 'end_date' in filters and filters['end_date']:
-            query = query.where("sighting_date", "<=", filters['end_date'])
+        query = self._apply_date_filters(query, filters)
         
         return query
     
-    def _rebuild_query_from_doc(self, filters: dict, last_doc):
-        """Rebuild query and start after the last document."""
+    def _apply_date_filters(self, query: firestore.Query, filters: dict) -> firestore.Query:
+        """Apply date range filters to query if provided."""
+        start_date = filters.get('start_date')
+        end_date = filters.get('end_date')
+        
+        if start_date:
+            query = query.where("sighting_date", ">=", start_date)
+        if end_date:
+            query = query.where("sighting_date", "<=", end_date)
+        
+        return query
+    
+    def _rebuild_query_from_doc(self, filters: dict, last_doc: firestore.DocumentSnapshot) -> firestore.Query:
+        """
+        Rebuild query starting after a document for pagination continuation.
+        
+        Args:
+            filters: Query filters to reapply
+            last_doc: Document snapshot to continue from
+            
+        Returns:
+            firestore.Query: New query starting after the given document
+        """
         query = self._build_query(filters)
         return query.start_after(last_doc)
     
@@ -170,15 +187,14 @@ class SightingService:
         if not (bounds['south'] <= lat <= bounds['north']):
             return False
         
-        # Check longitude bounds (handle dateline crossing)
+        # Check longitude bounds (handle International Date Line crossing)
         west = bounds['west']
         east = bounds['east']
         
         if west <= east:
-            # Normal case (doesn't cross dateline)
-            lng_match = west <= lng <= east
+            is_within_longitude_bounds = west <= lng <= east
         else:
-            # Crosses dateline
-            lng_match = west <= lng or lng <= east
+            # Bounds cross the International Date Line (e.g., Pacific region queries)
+            is_within_longitude_bounds = lng >= west or lng <= east
         
-        return lng_match
+        return is_within_longitude_bounds

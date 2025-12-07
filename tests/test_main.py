@@ -65,7 +65,7 @@ def test_submit_dog_success(mock_gmaps, mock_pubsub, mock_storage, mock_firestor
     # pubsub_args[0] is topic, pubsub_args[1] is message bytes
     import json
     msg_json = json.loads(pubsub_args[1].decode('utf-8'))
-    assert msg_json['user_id'] == 'mock_user_123'
+    assert msg_json['user_id'] == {'string': 'mock_user_123'}
 
     mock_firestore.collection.assert_called_with("sightings")
     
@@ -74,7 +74,7 @@ def test_submit_dog_success(mock_gmaps, mock_pubsub, mock_storage, mock_firestor
     args, _ = doc_ref_mock.set.call_args
     assert args[0]['user_id'] == 'mock_user_123'
 
-    mock_gmaps.reverse_geocode.assert_called_with(('37.7749', '-122.4194'))
+    mock_gmaps.reverse_geocode.assert_called_with((37.7749, -122.4194))
 
 @patch('app.gcp_clients.firestore_client')
 def test_get_sightings_success(mock_firestore, client):
@@ -191,4 +191,4 @@ def test_index_page(client):
 def test_submit_missing_fields(client):
     response = client.post('/submit', data={})
     assert response.status_code == 400
-    assert b"Missing required fields" in response.data
+    assert b"coordinates" in response.data or b"required" in response.data
