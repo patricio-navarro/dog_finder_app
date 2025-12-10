@@ -4,6 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token }}">
     <title>Lost Dog Finder</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     <link
@@ -61,10 +62,19 @@
                 </form>
             </div>
 
-            <!-- Find Section (Split View) -->
             <div id="find-section" class="section-content">
                 <div class="finder-container">
                     <div class="finder-sidebar">
+                        <div id="finder-results" class="finder-results">
+                            <div id="sightings-list" class="sightings-grid">
+                                <!-- Cards injected here -->
+                            </div>
+                            <button id="load-more-btn" class="load-more-btn hidden" onclick="loadMore()">Load
+                                More</button>
+                        </div>
+                    </div>
+
+                    <div class="finder-map">
                         <div class="finder-filters">
                             <div class="filter-row">
                                 <div class="filter-group">
@@ -78,21 +88,7 @@
                                     </select>
                                 </div>
                             </div>
-                            <div style="font-size: 0.8rem; color:#888;">
-                                Showing dogs in map area
-                            </div>
                         </div>
-
-                        <div id="finder-results" class="finder-results">
-                            <div id="sightings-list" class="sightings-grid">
-                                <!-- Cards injected here -->
-                            </div>
-                            <button id="load-more-btn" class="load-more-btn hidden" onclick="loadMore()">Load
-                                More</button>
-                        </div>
-                    </div>
-
-                    <div class="finder-map">
                         <button id="search-area-btn" class="search-area-btn" onclick="searchCurrentArea()">Search this
                             area</button>
                         <div id="find-map"></div>

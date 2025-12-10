@@ -216,15 +216,33 @@ function renderSighting(sighting) {
         infoWindow.open(findMap, marker);
     };
 
-    card.innerHTML = `
-        <img src="${sighting.image_url.startsWith('gs://') ? '#' : sighting.image_url}" 
-             onerror="this.src='/static/placeholder.png'" alt="Dog">
-        <div class="sighting-info">
-            <div class="sighting-loc">${locText}</div>
-            <div class="sighting-date">Sighted: ${sighting.sighting_date}</div>
-            ${sighting.comments ? `<div style="font-size:0.8rem; color:#666; margin-top:4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${sighting.comments}</div>` : ''}
-        </div>
-    `;
+    // Safe DOM creation for Card
+    const img = document.createElement('img');
+    img.src = sighting.image_url.startsWith('gs://') ? '#' : sighting.image_url;
+    img.alt = 'Dog';
+    img.onerror = function () { this.src = '/static/placeholder.png'; };
+    card.appendChild(img);
+
+    const infoDiv = document.createElement('div');
+    infoDiv.className = 'sighting-info';
+
+    const locDiv = document.createElement('div');
+    locDiv.className = 'sighting-loc';
+    locDiv.textContent = locText;
+    infoDiv.appendChild(locDiv);
+
+    const dateDiv = document.createElement('div');
+    dateDiv.className = 'sighting-date';
+    dateDiv.textContent = `Sighted: ${sighting.sighting_date}`;
+    infoDiv.appendChild(dateDiv);
+
+    if (sighting.comments) {
+        const commentDiv = document.createElement('div');
+        commentDiv.style.cssText = "font-size:0.8rem; color:#666; margin-top:4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;";
+        commentDiv.textContent = sighting.comments;
+        infoDiv.appendChild(commentDiv);
+    }
+    card.appendChild(infoDiv);
     listContainer.appendChild(card);
 
     // 2. Map Marker
@@ -235,20 +253,40 @@ function renderSighting(sighting) {
         icon: 'https://maps.google.com/mapfiles/ms/icons/blue-dot.png'
     });
 
-    // Info Window
-    const commentHtml = sighting.comments ?
-        `<div style="margin-top:8px; padding-top:8px; border-top:1px solid #eee; font-size:0.9rem; color:#333; font-style:italic;">"${sighting.comments}"</div>` : '';
+    // Info Window - Responsive sizing & Safe DOM creation
+    const isMobile = window.innerWidth <= 640;
+    const infoWidth = isMobile ? 160 : 240;
+
+    const iwContent = document.createElement('div');
+    iwContent.style.width = infoWidth + 'px';
+    iwContent.style.maxWidth = infoWidth + 'px';
+
+    const iwImg = document.createElement('img');
+    iwImg.src = sighting.image_url.startsWith('gs://') ? '#' : sighting.image_url;
+    iwImg.onerror = function () { this.src = '/static/placeholder.png'; };
+    iwImg.style.cssText = `width:100%;height:${isMobile ? 70 : 140}px;object-fit:cover;border-radius:4px;margin-bottom:6px;`;
+    iwContent.appendChild(iwImg);
+
+    const iwLoc = document.createElement('div');
+    iwLoc.textContent = locText;
+    iwLoc.style.cssText = `font-weight:600; font-size:${isMobile ? '0.85rem' : '1rem'}; margin-bottom:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;`;
+    iwContent.appendChild(iwLoc);
+
+    const iwDate = document.createElement('div');
+    iwDate.textContent = sighting.sighting_date;
+    iwDate.style.cssText = `color:#666; font-size:${isMobile ? '0.75rem' : '0.85rem'};`;
+    iwContent.appendChild(iwDate);
+
+    if (sighting.comments && !isMobile) {
+        const iwComment = document.createElement('div');
+        iwComment.textContent = `"${sighting.comments.substring(0, 60)}${sighting.comments.length > 60 ? '...' : ''}"`;
+        iwComment.style.cssText = `margin-top:6px; padding-top:6px; border-top:1px solid #eee; font-size:${isMobile ? '0.75rem' : '0.85rem'}; color:#333; font-style:italic; max-height:40px; overflow:hidden;`;
+        iwContent.appendChild(iwComment);
+    }
 
     const infoWindow = new google.maps.InfoWindow({
-        content: `
-            <div style="width:240px">
-                <img src="${sighting.image_url.startsWith('gs://') ? '#' : sighting.image_url}" 
-                     onerror="this.src='/static/placeholder.png'" style="width:100%;height:140px;object-fit:cover;border-radius:6px;margin-bottom:8px;">
-                <div style="font-weight:600; font-size:1rem; margin-bottom:2px;">${locText}</div>
-                <div style="color:#666; font-size:0.85rem;">Sighted: ${sighting.sighting_date}</div>
-                ${commentHtml}
-            </div>
-        `
+        content: iwContent,
+        maxWidth: infoWidth + 20
     });
 
     marker.addListener('click', () => {
@@ -333,7 +371,14 @@ document.addEventListener('DOMContentLoaded', () => {
             formData.append('image', imageFile);
 
             try {
-                const response = await fetch('/submit', { method: 'POST', body: formData });
+                const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+                const response = await fetch('/submit', {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'X-CSRFToken': csrfToken
+                    }
+                });
                 const result = await response.json();
                 if (response.ok) {
                     showNotification('Report submitted successfully!', 'success');

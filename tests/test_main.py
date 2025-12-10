@@ -11,6 +11,9 @@ import main
 @pytest.fixture
 def client():
     main.app.config['TESTING'] = True
+    main.app.config['WTF_CSRF_ENABLED'] = False
+    # Disable rate limiting for tests
+    main.app.config['RATELIMIT_ENABLED'] = False
     with main.app.test_client() as client:
         yield client
 

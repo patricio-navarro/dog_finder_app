@@ -5,6 +5,7 @@ import re
 from datetime import datetime
 from typing import Optional
 from werkzeug.datastructures import FileStorage
+import bleach
 
 from ..exceptions import ValidationError
 
@@ -182,5 +183,9 @@ def validate_comments(comments: Optional[str], max_length: int = 1000) -> str:
     
     if len(comments) > max_length:
         raise ValidationError("comments", f"Comments exceed maximum length of {max_length} characters")
+
+    # Sanitize inputs to prevent XSS (strips tags by default)
+    # We only allow basic text, so we strip everything
+    sanitized = bleach.clean(comments.strip(), tags=[], attributes={}, strip=True)
     
-    return comments.strip()
+    return sanitized

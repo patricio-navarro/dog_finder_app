@@ -6,8 +6,9 @@ Business logic, validation, and data access are handled by dedicated services.
 """
 import logging
 from flask import Blueprint, render_template, request, jsonify
+from flask_wtf.csrf import generate_csrf
 
-from . import gcp_clients
+from . import gcp_clients, limiter, csrf
 from .services.storage_service import StorageService
 from .services.geocoding_service import GeocodingService
 from .services.pubsub_service import PubSubService
@@ -50,10 +51,12 @@ def get_sighting_service():
 @main_bp.route('/')
 def index():
     """Render main page."""
-    return render_template('index.html', maps_api_key=gcp_clients.GOOGLE_MAPS_API_KEY)
+    csrf_token = generate_csrf()
+    return render_template('index.html', maps_api_key=gcp_clients.GOOGLE_MAPS_API_KEY, csrf_token=csrf_token)
 
 
 @main_bp.route('/submit', methods=['POST'])
+@limiter.limit("20 per hour")
 def submit_dog():
     """
     Submit a dog sighting.
@@ -125,6 +128,7 @@ def submit_dog():
 
 
 @main_bp.route('/api/sightings', methods=['GET'])
+@csrf.exempt
 def get_sightings():
     """
     Get dog sightings with optional filtering and pagination.
