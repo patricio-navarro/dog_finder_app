@@ -3,7 +3,8 @@ Storage service for handling image uploads to Google Cloud Storage.
 """
 import uuid
 import logging
-from typing import Optional
+from typing import Optional, Any
+from werkzeug.datastructures import FileStorage
 
 from ..exceptions import StorageError, ServiceUnavailableError
 from .. import gcp_clients
@@ -14,7 +15,7 @@ logger = logging.getLogger(__name__)
 class StorageService:
     """Service for managing image uploads to GCS."""
     
-    def __init__(self, storage_client=None, bucket_name: str = ""):
+    def __init__(self, storage_client: Optional[Any] = None, bucket_name: str = ""):
         """
         Initialize storage service.
         
@@ -25,7 +26,7 @@ class StorageService:
         self.storage_client = storage_client or gcp_clients.storage_client
         self.bucket_name = bucket_name or gcp_clients.BUCKET_NAME
     
-    def upload_image(self, image_file, filename: Optional[str] = None) -> str:
+    def upload_image(self, image_file: FileStorage, filename: Optional[str] = None) -> str:
         """
         Upload image file to GCS.
         
@@ -45,7 +46,9 @@ class StorageService:
         
         if not filename:
             # Generate unique filename
-            original_ext = image_file.filename.rsplit('.', 1)[-1] if '.' in image_file.filename else 'jpg'
+            # Use strict type checking for filename property
+            original_filename = image_file.filename or 'image.jpg'
+            original_ext = original_filename.rsplit('.', 1)[-1] if '.' in original_filename else 'jpg'
             filename = f"{uuid.uuid4()}.{original_ext}"
         
         try:

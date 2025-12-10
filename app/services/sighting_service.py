@@ -2,10 +2,10 @@
 Sighting service for Firestore database operations.
 """
 import logging
-from typing import Optional, List
+from typing import Optional, List, Dict, Any
 from google.cloud import firestore
 
-from ..models.sighting import SightingResponse, Location
+from ..models.sighting import SightingResponse
 from ..exceptions import ServiceUnavailableError
 from .. import gcp_clients
 
@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 class SightingService:
     """Service for managing dog sightings in Firestore."""
     
-    def __init__(self, firestore_client=None):
+    def __init__(self, firestore_client: Optional[Any] = None):
         """
         Initialize sighting service.
         
@@ -25,7 +25,7 @@ class SightingService:
         self.firestore = firestore_client or gcp_clients.firestore_client
         self.collection_name = "sightings"
     
-    def create_sighting(self, sighting_data: dict) -> str:
+    def create_sighting(self, sighting_data: Dict[str, Any]) -> str:
         """
         Create a new sighting in Firestore.
         
@@ -50,8 +50,8 @@ class SightingService:
             logger.error(f"Failed to create sighting: {e}")
             raise
     
-    def get_sightings(self, filters: Optional[dict] = None, 
-                     cursor: Optional[str] = None, limit: int = 10) -> dict:
+    def get_sightings(self, filters: Optional[Dict[str, Any]] = None, 
+                     cursor: Optional[str] = None, limit: int = 10) -> Dict[str, Any]:
         """
         Query sightings with filtering and pagination.
         
@@ -80,7 +80,7 @@ class SightingService:
                 query = query.start_after(cursor_doc)
         
         # Execute query with deep scan for geo filtering
-        sightings = []
+        sightings: List[Dict[str, Any]] = []
         last_scanned_doc = None
         bounds = filters.get('bounds')
         
@@ -121,7 +121,7 @@ class SightingService:
             "next_cursor": next_cursor
         }
     
-    def _build_query(self, filters: dict) -> firestore.Query:
+    def _build_query(self, filters: Dict[str, Any]) -> firestore.Query:
         """
         Build Firestore query from filters.
         
@@ -139,7 +139,7 @@ class SightingService:
         
         return query
     
-    def _apply_date_filters(self, query: firestore.Query, filters: dict) -> firestore.Query:
+    def _apply_date_filters(self, query: firestore.Query, filters: Dict[str, Any]) -> firestore.Query:
         """Apply date range filters to query if provided."""
         start_date = filters.get('start_date')
         end_date = filters.get('end_date')
@@ -151,7 +151,7 @@ class SightingService:
         
         return query
     
-    def _rebuild_query_from_doc(self, filters: dict, last_doc: firestore.DocumentSnapshot) -> firestore.Query:
+    def _rebuild_query_from_doc(self, filters: Dict[str, Any], last_doc: firestore.DocumentSnapshot) -> firestore.Query:
         """
         Rebuild query starting after a document for pagination continuation.
         
@@ -165,7 +165,7 @@ class SightingService:
         query = self._build_query(filters)
         return query.start_after(last_doc)
     
-    def _is_within_bounds(self, sighting_data: dict, bounds: dict) -> bool:
+    def _is_within_bounds(self, sighting_data: Dict[str, Any], bounds: Dict[str, float]) -> bool:
         """
         Check if sighting location is within geographic bounds.
         
@@ -180,8 +180,20 @@ class SightingService:
         if not location:
             return False
         
-        lat = location.latitude
-        lng = location.longitude
+        # FireStore GeoPoint access
+        # Depending on library version, might be dict or object. 
+        # Assuming object based on previous usage `location.latitude`
+        # But `doc.to_dict()` returns GeoPoint objects usually.
+        try:
+            lat = location.latitude
+            lng = location.longitude
+        except AttributeError:
+            # Fallback if it's a dict
+            lat = location.get('latitude')
+            lng = location.get('longitude')
+            
+        if lat is None or lng is None:
+            return False
         
         # Check latitude bounds
         if not (bounds['south'] <= lat <= bounds['north']):

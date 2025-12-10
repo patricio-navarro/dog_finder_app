@@ -1,5 +1,6 @@
 import os
-from flask import Blueprint, redirect, url_for, session, current_app
+from typing import Dict, Any, Optional
+from flask import Blueprint, redirect, url_for, session, current_app, Response
 from authlib.integrations.flask_client import OAuth
 from flask_login import login_user, logout_user, login_required
 from .user import User
@@ -7,8 +8,13 @@ from .user import User
 auth_bp = Blueprint('auth', __name__)
 oauth = OAuth()
 
-def init_oauth(app):
-    """Initialize Authlib with Google configuration."""
+def init_oauth(app: Any) -> None:
+    """
+    Initialize Authlib with Google OAuth 2.0 configuration.
+    
+    Uses OpenID Connect discovery via 'server_metadata_url' for robust
+    configuration of endpoints and keys.
+    """
     oauth.init_app(app)
     oauth.register(
         name='google',
@@ -21,51 +27,71 @@ def init_oauth(app):
     )
 
 @auth_bp.route('/login')
-def login():
-    """Initiate Google Login."""
-    # Build absolute URL for callback
+def login() -> Response:
+    """Initiates the Google OAuth 2.0 login flow."""
     redirect_uri = url_for('auth.auth_callback', _external=True)
     return oauth.google.authorize_redirect(redirect_uri)
 
 @auth_bp.route('/auth/callback')
-def auth_callback():
-    """Handle Google OAuth callback."""
+def auth_callback() -> Any:
+    """
+    Handles the Google OAuth callback.
+    
+    Exchanges the authorization code for an access token, parses user info,
+    creates the local user session, and redirects to the main app.
+    """
     try:
         token = oauth.google.authorize_access_token()
-        # Parse ID token
-        user_info = token.get('userinfo')
-        if not user_info:
-            # Fallback if userinfo not in token (depends on scopes)
-            user_info = oauth.google.userinfo()
-            
+        user_info = _extract_user_info(token)
+        
         if not user_info:
             return "Failed to fetch user info", 400
 
-        # Create user object
-        # OIDC uses 'sub', legacy Google APIs use 'id'
-        user_id = user_info.get('sub') or user_info.get('id')
-        name = user_info.get('name', 'User')
-        email = user_info.get('email', '')
-        picture = user_info.get('picture', '')
-        
-        user = User(user_id=user_id, name=name, email=email, profile_pic=picture)
-        
-        # Log in (Flask-Login)
+        user = _create_user_from_payload(user_info)
         login_user(user)
         
-        # Store essential info in session for reconstruction
+        # Store essential info in session for reconstruction via user_loader
         session['user_info'] = user.to_dict()
         
         return redirect(url_for('main.index'))
         
     except Exception as e:
-        current_app.logger.error(f"OAuth failed: {e}")
+        current_app.logger.error(f"OAuth callback failed: {e}", exc_info=True)
         return f"Authentication failed: {e}", 400
 
 @auth_bp.route('/logout')
 @login_required
-def logout():
-    """Log out user."""
+def logout() -> Response:
+    """Logs out the current user and clears the session."""
     logout_user()
     session.pop('user_info', None)
-    return redirect(url_for('auth.login')) # Or index, but index is protected now
+    return redirect(url_for('auth.login'))
+
+def _extract_user_info(token: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    """
+    Extracts user information from the OAuth token.
+    
+    Attempts to get 'userinfo' from the ID token first, falling back to 
+    the userinfo endpoint if necessary.
+    """
+    user_info = token.get('userinfo')
+    if not user_info:
+        user_info = oauth.google.userinfo()
+    return user_info
+
+def _create_user_from_payload(payload: Dict[str, Any]) -> User:
+    """
+    Creates a User model instance from the OIDC payload.
+    
+    Handles the mapping of OIDC claims to the User model fields, including 
+    the fallback from 'sub' to 'id' for the unique identifier.
+    """
+    # 'sub' is standard for OIDC, 'id' is used in legacy Google APIs
+    user_id = payload.get('sub') or payload.get('id')
+    
+    return User(
+        user_id=str(user_id),
+        name=payload.get('name', 'User'),
+        email=payload.get('email', ''),
+        profile_pic=payload.get('picture', '')
+    )

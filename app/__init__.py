@@ -1,4 +1,5 @@
 import os
+from typing import Optional
 from flask import Flask, session
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
@@ -17,10 +18,10 @@ csrf = CSRFProtect()
 login_manager = LoginManager()
 login_manager.login_view = 'auth.login' # Redirect here if not logged in
 
-def create_app():
+def create_app() -> Flask:
+    """Initialize and configure the Flask application."""
     app = Flask(__name__)
     
-    # Secret key for CSRF and Session (use environment variable in production)
     # Secret key for CSRF and Session (use environment variable in production)
     secret_key = os.getenv('FLASK_SECRET_KEY')
     if not secret_key:
@@ -43,9 +44,13 @@ def create_app():
     # User Loader
     from .user import User
     @login_manager.user_loader
-    def load_user(user_id):
-        # Without a DB, we recover user state from the session
-        # stored during the login callback
+    def load_user(user_id: str) -> Optional[User]:
+        """
+        Load user from session data.
+        
+        Since we don't have a database, we reconstruct the User object
+        from the session info stored during login.
+        """
         user_info = session.get('user_info')
         if user_info and user_info.get('id') == user_id:
             return User(

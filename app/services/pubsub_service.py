@@ -3,9 +3,9 @@ Pub/Sub service for publishing sighting messages.
 """
 import json
 import logging
-from typing import Optional
+from typing import Optional, Dict, Any
 
-from ..exceptions import PublishError, ServiceUnavailableError
+from ..exceptions import PublishError
 from .. import gcp_clients
 
 logger = logging.getLogger(__name__)
@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 class PubSubService:
     """Service for publishing messages to Google Cloud Pub/Sub."""
     
-    def __init__(self, publisher=None, topic_path: str = ""):
+    def __init__(self, publisher: Optional[Any] = None, topic_path: str = ""):
         """
         Initialize Pub/Sub service.
         
@@ -25,7 +25,7 @@ class PubSubService:
         self.publisher = publisher or gcp_clients.pubsub_publisher
         self.topic_path = topic_path or gcp_clients.topic_path
     
-    def publish_sighting(self, message_data: dict) -> Optional[str]:
+    def publish_sighting(self, message_data: Dict[str, Any]) -> Optional[str]:
         """
         Publish sighting message to Pub/Sub.
         
@@ -36,7 +36,6 @@ class PubSubService:
             str: Message ID if published successfully, None if client not initialized
             
         Raises:
-            ServiceUnavailableError: If publisher client is not initialized
             PublishError: If publishing fails
         """
         if not self.publisher:
@@ -61,7 +60,7 @@ class PubSubService:
             logger.error(f"Failed to publish to Pub/Sub: {e}")
             raise PublishError(f"Failed to publish message: {str(e)}")
     
-    def format_avro_message(self, sighting_data: dict) -> dict:
+    def format_avro_message(self, sighting_data: Dict[str, Any]) -> Dict[str, Any]:
         """
         Format message data with Avro union type handling.
         

@@ -2,7 +2,7 @@
 Geocoding service for converting coordinates to location details.
 """
 import logging
-from typing import Optional
+from typing import Optional, Dict, List, Any
 
 from ..models.sighting import Location
 from ..exceptions import GeocodingError, ServiceUnavailableError
@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 class GeocodingService:
     """Service for reverse geocoding operations."""
     
-    def __init__(self, gmaps_client=None):
+    def __init__(self, gmaps_client: Optional[Any] = None):
         """
         Initialize geocoding service.
         
@@ -74,7 +74,7 @@ class GeocodingService:
         
         return location
     
-    def _parse_address_components(self, components: list) -> dict:
+    def _parse_address_components(self, components: List[Dict[str, Any]]) -> Dict[str, str]:
         """
         Extract city, region, country from Google Maps address components.
         

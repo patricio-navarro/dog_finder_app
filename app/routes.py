@@ -5,7 +5,8 @@ This module provides thin HTTP handlers that delegate to service classes.
 Business logic, validation, and data access are handled by dedicated services.
 """
 import logging
-from flask import Blueprint, render_template, request, jsonify
+from typing import Tuple, Dict, Any, Union
+from flask import Blueprint, render_template, request, jsonify, Response
 from flask_wtf.csrf import generate_csrf
 from flask_login import login_required, current_user
 
@@ -21,46 +22,50 @@ from .utils.validators import (
 )
 from .utils.url_helpers import gs_to_public_url
 from .exceptions import ValidationError, ServiceUnavailableError
-from .config import DEFAULT_PAGE_LIMIT, MOCK_USER_ID
+from .config import DEFAULT_PAGE_LIMIT
 
 main_bp = Blueprint('main', __name__)
 logger = logging.getLogger(__name__)
 
 
 # Lazy initialization helpers - services are created when first accessed
-def get_storage_service():
+def get_storage_service() -> StorageService:
     """Get storage service instance with initialized clients."""
     return StorageService()
 
 
-def get_geocoding_service():
+def get_geocoding_service() -> GeocodingService:
     """Get geocoding service instance with initialized clients."""
     return GeocodingService()
 
 
-def get_pubsub_service():
+def get_pubsub_service() -> PubSubService:
     """Get Pub/Sub service instance with initialized clients."""
     return PubSubService()
 
 
-def get_sighting_service():
+def get_sighting_service() -> SightingService:
     """Get sighting service instance with initialized clients."""
     return SightingService()
 
 
-
 @main_bp.route('/')
 @login_required
-def index():
+def index() -> str:
     """Render main page."""
     csrf_token = generate_csrf()
-    return render_template('index.html', maps_api_key=gcp_clients.GOOGLE_MAPS_API_KEY, csrf_token=csrf_token, user=current_user)
+    return render_template(
+        'index.html',
+        maps_api_key=gcp_clients.GOOGLE_MAPS_API_KEY,
+        csrf_token=csrf_token,
+        user=current_user
+    )
 
 
 @main_bp.route('/submit', methods=['POST'])
 @login_required
 @limiter.limit("20 per hour")
-def submit_dog():
+def submit_dog() -> Tuple[Response, int]:
     """
     Submit a dog sighting.
     
@@ -133,7 +138,7 @@ def submit_dog():
 @main_bp.route('/api/sightings', methods=['GET'])
 @csrf.exempt
 @login_required
-def get_sightings():
+def get_sightings() -> Tuple[Response, int]:
     """
     Get dog sightings with optional filtering and pagination.
     
