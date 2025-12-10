@@ -38,8 +38,13 @@ def auth_callback() -> Any:
     Handles the Google OAuth callback.
     
     Exchanges the authorization code for an access token, parses user info,
-    creates the local user session, and redirects to the main app.
+    creates the local user session, persists user to DB, and redirects to the main app.
     """
+    # Lazy initialization helper for User Service to avoid circular imports
+    def get_user_service():
+        from .services.user_service import UserService
+        return UserService()
+
     try:
         token = oauth.google.authorize_access_token()
         user_info = _extract_user_info(token)
@@ -48,9 +53,17 @@ def auth_callback() -> Any:
             return "Failed to fetch user info", 400
 
         user = _create_user_from_payload(user_info)
+        
+        # Persist user to Firestore
+        try:
+            get_user_service().create_or_update_user(user)
+        except Exception as e:
+            current_app.logger.error(f"Failed to persist user to Firestore: {e}")
+            # We proceed even if persistence fails, as session login works independently
+        
         login_user(user)
         
-        # Store essential info in session for reconstruction via user_loader
+        # Store essential info in session as fallback or for fast access
         session['user_info'] = user.to_dict()
         
         return redirect(url_for('main.index'))

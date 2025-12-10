@@ -148,6 +148,13 @@ gcloud firestore indexes composite create \
     --project="$GOOGLE_CLOUD_PROJECT" \
     --quiet || echo "⚠️ Index creation might have failed or already exists. Check Console if search fails."
 
+echo "Ensuring Users Index exists..."
+gcloud firestore indexes composite create \
+    --collection-group=users \
+    --field-config field-path=created_at,order=descending \
+    --project="$GOOGLE_CLOUD_PROJECT" \
+    --quiet || echo "⚠️ Index creation might have failed or already exists."
+
 # 8. Grant Service Account Token Creator Role (For Signed URLs)
 echo ""
 echo "[8/8] Checking IAM Permissions..."

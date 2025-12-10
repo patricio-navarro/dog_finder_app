@@ -1,5 +1,5 @@
 import os
-from typing import Optional
+from typing import Optional, Any
 from flask import Flask, session
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
@@ -42,22 +42,36 @@ def create_app() -> Flask:
     app.register_blueprint(auth_bp)
 
     # User Loader
-    from .user import User
+    from .services.user_service import UserService
+    
     @login_manager.user_loader
-    def load_user(user_id: str) -> Optional[User]:
+    def load_user(user_id: str) -> Optional[Any]:
         """
-        Load user from session data.
+        Load user from Firestore.
         
-        Since we don't have a database, we reconstruct the User object
-        from the session info stored during login.
+        Falls back to session if Firestore fails or returns None (though
+        ideally we rely on DB).
         """
+        try:
+            user_service = UserService()
+            user = user_service.get_user(user_id)
+            if user:
+                return user
+        except Exception as e:
+            app.logger.error(f"Failed to load user from Firestore: {e}")
+
+        # Fallback: Recover from session if DB lookup fails/ is slow / not found
+        # (Useful for immediate consistency or offline reliability if needed)
+        from .user import User
         user_info = session.get('user_info')
         if user_info and user_info.get('id') == user_id:
+            # Reconstruct from session dict
+            # Handle potential missing keys if session structure is old
             return User(
-                user_id=user_info['id'],
-                name=user_info['name'],
-                email=user_info['email'],
-                profile_pic=user_info['profile_pic']
+                user_id=user_info.get('id', ''),
+                name=user_info.get('name', ''),
+                email=user_info.get('email', ''),
+                profile_pic=user_info.get('profile_pic', '')
             )
         return None
     
