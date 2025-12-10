@@ -7,6 +7,7 @@ Business logic, validation, and data access are handled by dedicated services.
 import logging
 from flask import Blueprint, render_template, request, jsonify
 from flask_wtf.csrf import generate_csrf
+from flask_login import login_required, current_user
 
 from . import gcp_clients, limiter, csrf
 from .services.storage_service import StorageService
@@ -49,13 +50,15 @@ def get_sighting_service():
 
 
 @main_bp.route('/')
+@login_required
 def index():
     """Render main page."""
     csrf_token = generate_csrf()
-    return render_template('index.html', maps_api_key=gcp_clients.GOOGLE_MAPS_API_KEY, csrf_token=csrf_token)
+    return render_template('index.html', maps_api_key=gcp_clients.GOOGLE_MAPS_API_KEY, csrf_token=csrf_token, user=current_user)
 
 
 @main_bp.route('/submit', methods=['POST'])
+@login_required
 @limiter.limit("20 per hour")
 def submit_dog():
     """
@@ -87,7 +90,7 @@ def submit_dog():
             sighting_date=date_str,
             image_url=image_url,
             comments=comments,
-            user_id=MOCK_USER_ID  # TODO: Replace with actual user ID from auth
+            user_id=current_user.id
         )
         
         # 5. Publish to Pub/Sub
@@ -129,6 +132,7 @@ def submit_dog():
 
 @main_bp.route('/api/sightings', methods=['GET'])
 @csrf.exempt
+@login_required
 def get_sightings():
     """
     Get dog sightings with optional filtering and pagination.

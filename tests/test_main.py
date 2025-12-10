@@ -14,6 +14,8 @@ def client():
     main.app.config['WTF_CSRF_ENABLED'] = False
     # Disable rate limiting for tests
     main.app.config['RATELIMIT_ENABLED'] = False
+    # Disable login requirement for controller tests
+    main.app.config['LOGIN_DISABLED'] = True
     with main.app.test_client() as client:
         yield client
 
@@ -21,8 +23,10 @@ def client():
 @patch('app.gcp_clients.storage_client')
 @patch('app.gcp_clients.pubsub_publisher')
 @patch('app.gcp_clients.gmaps')
-def test_submit_dog_success(mock_gmaps, mock_pubsub, mock_storage, mock_firestore, client):
+@patch('app.routes.current_user')
+def test_submit_dog_success(mock_current_user, mock_gmaps, mock_pubsub, mock_storage, mock_firestore, client):
     # Setup mocks
+    mock_current_user.id = "mock_user_123"
     mock_bucket = MagicMock()
     mock_blob = MagicMock()
     mock_storage.bucket.return_value = mock_bucket
