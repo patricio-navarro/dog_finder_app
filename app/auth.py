@@ -108,3 +108,31 @@ def _create_user_from_payload(payload: Dict[str, Any]) -> User:
         email=payload.get('email', ''),
         profile_pic=payload.get('picture', '')
     )
+
+def configure_login_manager(login_manager: Any) -> None:
+    """
+    Configures the Flask-Login manager with the user loader callback.
+    Extracts user loading logic out of the app factory.
+    """
+    @login_manager.user_loader
+    def load_user(user_id: str) -> Optional[User]:
+        from .services.user_service import UserService
+        
+        try:
+            user_service = UserService()
+            database_user = user_service.get_user(user_id)
+            if database_user:
+                return database_user
+        except Exception as firestore_error:
+            current_app.logger.error(f"Failed to load user from Firestore: {firestore_error}")
+
+        cached_user_data = session.get('user_info')
+        if cached_user_data and cached_user_data.get('id') == user_id:
+            return User(
+                user_id=cached_user_data.get('id', ''),
+                name=cached_user_data.get('name', ''),
+                email=cached_user_data.get('email', ''),
+                profile_pic=cached_user_data.get('profile_pic', '')
+            )
+            
+        return None
