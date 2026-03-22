@@ -1,11 +1,5 @@
-"""
-Refactored route handlers using service layer pattern.
-
-This module provides thin HTTP handlers that delegate to service classes.
-Business logic, validation, and data access are handled by dedicated services.
-"""
 import logging
-from typing import Tuple, Dict, Any, Union
+from typing import Tuple
 from flask import Blueprint, render_template, request, jsonify, Response
 from flask_wtf.csrf import generate_csrf
 from flask_login import login_required, current_user
@@ -28,7 +22,6 @@ main_bp = Blueprint('main', __name__)
 logger = logging.getLogger(__name__)
 
 
-# Lazy initialization helpers - services are created when first accessed
 def get_storage_service() -> StorageService:
     """Get storage service instance with initialized clients."""
     return StorageService()
@@ -73,64 +66,54 @@ def submit_dog() -> Tuple[Response, int]:
     and stores in Firestore.
     """
     try:
-        # 1. Validate and extract form data
-        lat, lng = validate_coordinates(
+        latitude, longitude = validate_coordinates(
             request.form.get('lat'),
             request.form.get('lng')
         )
-        date_str = validate_date(request.form.get('date'))
-        comments = validate_comments(request.form.get('comments', ''))
-        image_file = validate_image(request.files.get('image'))
+        formatted_date = validate_date(request.form.get('date'))
+        sanitized_comments = validate_comments(request.form.get('comments', ''))
+        uploaded_image_file = validate_image(request.files.get('image'))
         
-        # 2. Upload image to GCS
-        image_url = get_storage_service().upload_image(image_file)
+        image_url = get_storage_service().upload_image(uploaded_image_file)
+        location_data = get_geocoding_service().reverse_geocode(latitude, longitude)
         
-        # 3. Reverse geocode coordinates
-        location = get_geocoding_service().reverse_geocode(lat, lng)
-        
-        # 4. Create sighting submission model
-        sighting = SightingSubmission(
-            latitude=lat,
-            longitude=lng,
-            sighting_date=date_str,
+        sighting_submission = SightingSubmission(
+            latitude=latitude,
+            longitude=longitude,
+            sighting_date=formatted_date,
             image_url=image_url,
-            comments=comments,
+            comments=sanitized_comments,
             user_id=current_user.id
         )
         
-        # 5. Publish to Pub/Sub
-        pubsub_message = sighting.to_pubsub_message()
-        # Update location in message with geocoded details
-        pubsub_message['location'] = location.to_dict()
+        pubsub_payload = sighting_submission.to_pubsub_message()
+        pubsub_payload['location'] = location_data.to_dict()
         
         try:
-            get_pubsub_service().publish_sighting(pubsub_message)
-        except Exception as e:
-            # Log error but don't fail the request
-            logger.error(f"Failed to publish to Pub/Sub: {e}")
+            get_pubsub_service().publish_sighting(pubsub_payload)
+        except Exception as pubsub_err:
+            logger.error(f"Failed to publish to Pub/Sub: {pubsub_err}")
         
-        # 6. Write to Firestore
-        firestore_doc = sighting.to_firestore_document(location)
+        firestore_document = sighting_submission.to_firestore_document(location_data)
         try:
-            doc_id = get_sighting_service().create_sighting(firestore_doc)
-            logger.info(f"Created sighting: {doc_id}")
-        except Exception as e:
-            logger.error(f"Failed to write to Firestore: {e}")
-            # Continue even if Firestore fails (Pub/Sub might have succeeded)
+            document_id = get_sighting_service().create_sighting(firestore_document)
+            logger.info(f"Created sighting: {document_id}")
+        except Exception as firestore_err:
+            logger.error(f"Failed to write to Firestore: {firestore_err}")
         
         return jsonify({
             "status": "success",
             "message": "Dog sighting reported!",
-            "data": pubsub_message
+            "data": pubsub_payload
         }), 200
     
-    except ValidationError as e:
-        return jsonify({"error": f"{e.field}: {e.message}"}), 400
+    except ValidationError as validation_err:
+        return jsonify({"error": f"{validation_err.field}: {validation_err.message}"}), 400
     
-    except ServiceUnavailableError as e:
-        return jsonify({"error": str(e)}), 503
+    except ServiceUnavailableError as service_err:
+        return jsonify({"error": str(service_err)}), 503
     
-    except Exception as e:
+    except Exception:
         logger.exception("Unexpected error during sighting submission")
         return jsonify({"error": "An unexpected error occurred"}), 500
 
@@ -150,45 +133,40 @@ def get_sightings() -> Tuple[Response, int]:
         - limit: Results per page (default: 10)
     """
     try:
-        # Validate query parameters
         start_date = request.args.get('start_date')
         end_date = request.args.get('end_date')
-        cursor = request.args.get('cursor')
-        limit = request.args.get('limit', type=int, default=DEFAULT_PAGE_LIMIT)
+        pagination_cursor = request.args.get('cursor')
+        page_limit = request.args.get('limit', type=int, default=DEFAULT_PAGE_LIMIT)
         
-        # Validate bounds if provided
-        bounds = validate_bounds(
+        geographic_bounds = validate_bounds(
             request.args.get('north', type=float),
             request.args.get('south', type=float),
             request.args.get('east', type=float),
             request.args.get('west', type=float)
         )
         
-        # Build filters
-        filters = {}
+        search_filters = {}
         if start_date:
-            filters['start_date'] = start_date
+            search_filters['start_date'] = start_date
         if end_date:
-            filters['end_date'] = end_date
-        if bounds:
-            filters['bounds'] = bounds
+            search_filters['end_date'] = end_date
+        if geographic_bounds:
+            search_filters['bounds'] = geographic_bounds
         
-        # Query sightings
-        result = get_sighting_service().get_sightings(filters, cursor, limit)
+        sightings_result = get_sighting_service().get_sightings(search_filters, pagination_cursor, page_limit)
         
-        # Convert GCS URLs to public URLs
-        for sighting in result['data']:
-            if sighting.get('image_url'):
-                sighting['image_url'] = gs_to_public_url(sighting['image_url'])
+        for sighting_record in sightings_result['data']:
+            if sighting_record.get('image_url'):
+                sighting_record['image_url'] = gs_to_public_url(sighting_record['image_url'])
         
-        return jsonify(result), 200
+        return jsonify(sightings_result), 200
     
-    except ValidationError as e:
-        return jsonify({"error": f"{e.field}: {e.message}"}), 400
+    except ValidationError as validation_err:
+        return jsonify({"error": f"{validation_err.field}: {validation_err.message}"}), 400
     
-    except ServiceUnavailableError as e:
-        return jsonify({"error": str(e)}), 503
+    except ServiceUnavailableError as service_err:
+        return jsonify({"error": str(service_err)}), 503
     
-    except Exception as e:
+    except Exception:
         logger.exception("Unexpected error during sightings retrieval")
         return jsonify({"error": "An unexpected error occurred"}), 500

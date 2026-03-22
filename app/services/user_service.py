@@ -1,9 +1,8 @@
 """
-User service for Firestore database operations.
+Service layer for user management and retrieval.
 """
 import logging
-from typing import Optional, Dict, Any
-from google.cloud import firestore
+from typing import Optional, Any
 
 from ..user import User
 from ..exceptions import ServiceUnavailableError
@@ -13,7 +12,7 @@ logger = logging.getLogger(__name__)
 
 
 class UserService:
-    """Service for managing users in Firestore."""
+    """Service handling user-related operations."""
     
     def __init__(self, firestore_client: Optional[Any] = None):
         """

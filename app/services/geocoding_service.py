@@ -5,7 +5,6 @@ import logging
 from typing import Optional, Dict, List, Any
 
 from ..models.sighting import Location
-from ..exceptions import GeocodingError, ServiceUnavailableError
 from .. import gcp_clients
 
 logger = logging.getLogger(__name__)
