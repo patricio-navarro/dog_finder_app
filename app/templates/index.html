@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token }}">
+    <title>Lost Dog Finder</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Outfit:wght@300;400;600&display=swap"
+        rel="stylesheet">
+</head>
+
+<body>
+    <div class="container">
+        <header>
+            <div class="header-left">
+                <img src="{{ url_for('static', filename='logo.png') }}" alt="Dog Finder Logo" class="logo">
+                <h1>Lost Dog Finder</h1>
+            </div>
+
+            <div class="header-controls">
+                <div class="tabs">
+                    <button class="tab-btn active" onclick="switchTab('report')">Report</button>
+                    <button class="tab-btn" onclick="switchTab('find')">Find</button>
+                </div>
+
+                {% if user.is_authenticated %}
+                <div class="user-profile">
+                    <img src="{{ user.profile_pic }}" alt="{{ user.name }}" class="user-avatar"
+                        title="{{ user.email }}">
+                    <a href="{{ url_for('auth.logout') }}" class="logout-btn">Logout</a>
+                </div>
+                {% endif %}
+            </div>
+        </header>
+
+        <main>
+            <!-- Report Section -->
+            <div id="report-section" class="section-content active">
+                <div class="map-container">
+                    <div id="map" style="width:100%; height:100%;"></div>
+                    <div id="map-instruction" class="map-instruction">Click on the map to pin the location</div>
+                </div>
+
+                <form id="sighting-form">
+                    <div class="form-group">
+                        <label for="date">Date Found</label>
+                        <input type="date" id="date" name="date" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="comments">Additional Comments</label>
+                        <textarea id="comments" name="comments" rows="3"
+                            placeholder="Describe the dog, condition, or exact location..."></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="image">Upload Photo</label>
+                        <div class="file-input-wrapper">
+                            <button type="button" class="btn-secondary"
+                                onclick="document.getElementById('image').click()">Choose Image</button>
+                            <span id="file-name">No file chosen</span>
+                            <input type="file" id="image" name="image" accept="image/*" required hidden>
+                        </div>
+                    </div>
+
+                    <input type="hidden" id="lat" name="lat">
+                    <input type="hidden" id="lng" name="lng">
+
+                    <button type="submit" class="btn-primary" id="submit-btn">Submit Report</button>
+                </form>
+            </div>
+
+            <div id="find-section" class="section-content">
+                <div class="finder-container">
+                    <div class="finder-sidebar">
+                        <div id="finder-results" class="finder-results">
+                            <div id="sightings-list" class="sightings-grid">
+                                <!-- Cards injected here -->
+                            </div>
+                            <button id="load-more-btn" class="load-more-btn hidden" onclick="loadMore()">Load
+                                More</button>
+                        </div>
+                    </div>
+
+                    <div class="finder-map">
+                        <div class="finder-filters">
+                            <div class="filter-row">
+                                <div class="filter-group">
+                                    <label>Time Range</label>
+                                    <select id="filter-date-range" onchange="resetAndFetch()">
+                                        <option value="7">Last 7 days</option>
+                                        <option value="15">Last 15 days</option>
+                                        <option value="30" selected>Last month</option>
+                                        <option value="365">Last year</option>
+                                        <option value="all">All time</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        <button id="search-area-btn" class="search-area-btn" onclick="searchCurrentArea()">Search this
+                            area</button>
+                        <div id="find-map"></div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <div id="notification" class="notification hidden"></div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+    <script src="https://maps.googleapis.com/maps/api/js?key={{ maps_api_key }}&callback=initMaps&loading=async" async
+        defer></script>
+</body>
+
+</html>

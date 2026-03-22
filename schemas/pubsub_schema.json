@@ -47,6 +47,15 @@
             "doc": "GCS URL of the uploaded image"
         },
         {
+            "name": "user_id",
+            "type": [
+                "null",
+                "string"
+            ],
+            "default": null,
+            "doc": "Google User ID of the reporter"
+        },
+        {
             "name": "comments",
             "type": "string",
             "doc": "Additional comments about the sighting"

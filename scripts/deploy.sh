@@ -18,6 +18,17 @@ fi
 # SERVICE_NAME and REGION are loaded from .env
 SERVICE_NAME=${SERVICE_NAME:-"dog-finder-app"}
 REGION=${REGION:-"us-central1"}
+# Check for required environment variables
+if [ -z "$GOOGLE_CLIENT_ID" ]; then
+    echo "Error: GOOGLE_CLIENT_ID is not set in .env"
+    exit 1
+fi
+
+if [ -z "$GOOGLE_CLIENT_SECRET" ]; then
+    echo "Error: GOOGLE_CLIENT_SECRET is not set in .env"
+    exit 1
+fi
+
 IMAGE_NAME="gcr.io/${GOOGLE_CLOUD_PROJECT}/${SERVICE_NAME}"
 
 echo "=================================================="
@@ -41,7 +52,10 @@ gcloud run deploy $SERVICE_NAME \
     --set-env-vars BUCKET_NAME="$BUCKET_NAME" \
     --set-env-vars TOPIC_ID="$TOPIC_ID" \
     --set-env-vars GOOGLE_MAPS_API_KEY="$GOOGLE_MAPS_API_KEY" \
-    --set-env-vars GOOGLE_CLOUD_PROJECT="$GOOGLE_CLOUD_PROJECT"
+    --set-env-vars GOOGLE_CLOUD_PROJECT="$GOOGLE_CLOUD_PROJECT" \
+    --set-env-vars FLASK_SECRET_KEY="$FLASK_SECRET_KEY" \
+    --set-env-vars GOOGLE_CLIENT_ID="$GOOGLE_CLIENT_ID" \
+    --set-env-vars GOOGLE_CLIENT_SECRET="$GOOGLE_CLIENT_SECRET"
 
 echo "=================================================="
 echo "Deployment Complete!"
