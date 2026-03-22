@@ -114,6 +114,8 @@ def test_get_sightings_success(mock_firestore, client):
     assert data[0]['location_details']['city'] == 'SF'
     assert data[0]['comments'] == 'Friendly dog'
 
+TEST_BUCKET = "test-bucket-stub"
+
 @patch('app.gcp_clients.storage_client')
 @patch('app.gcp_clients.firestore_client')
 def test_get_sightings_public_url(mock_firestore, mock_storage, client):
@@ -124,7 +126,7 @@ def test_get_sightings_public_url(mock_firestore, mock_storage, client):
     mock_doc.id = "doc123"
     mock_doc.to_dict.return_value = {
         "sighting_date": "2023-10-27",
-        "image_url": "gs://analytics-presentation-poc-lost-dogs/dog_123.jpg",
+        "image_url": f"gs://{TEST_BUCKET}/dog_123.jpg",
         "location": MagicMock(latitude=37.77, longitude=-122.41),
         "location_details": {}
     }
@@ -143,7 +145,7 @@ def test_get_sightings_public_url(mock_firestore, mock_storage, client):
     # Assertions
     assert len(data) == 1
     # Expect Public URL
-    assert data[0]['image_url'] == "https://storage.googleapis.com/analytics-presentation-poc-lost-dogs/dog_123.jpg"
+    assert data[0]['image_url'] == f"https://storage.googleapis.com/{TEST_BUCKET}/dog_123.jpg"
 
 @patch('app.gcp_clients.firestore_client')
 def test_get_sightings_with_filters(mock_firestore, client):

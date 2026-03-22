@@ -14,7 +14,9 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # Configuration
-BUCKET_NAME = os.getenv("BUCKET_NAME", "analytics-presentation-poc-lost-dogs")
+BUCKET_NAME = os.getenv("BUCKET_NAME")
+if not BUCKET_NAME:
+    raise EnvironmentError("BUCKET_NAME environment variable is required.")
 TOPIC_ID = os.getenv("TOPIC_ID", "dog-found-topic")
 PROJECT_ID = os.getenv("GOOGLE_CLOUD_PROJECT", "your-project-id")
 GOOGLE_MAPS_API_KEY = os.getenv("GOOGLE_MAPS_API_KEY", "YOUR_GOOGLE_MAPS_API_KEY")
