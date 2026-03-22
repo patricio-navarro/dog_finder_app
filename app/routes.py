@@ -1,6 +1,6 @@
 import logging
 from typing import Tuple
-from flask import Blueprint, render_template, request, jsonify, Response
+from flask import Blueprint, render_template, request, jsonify, Response, g
 from flask_wtf.csrf import generate_csrf
 from flask_login import login_required, current_user
 
@@ -23,23 +23,31 @@ logger = logging.getLogger(__name__)
 
 
 def get_storage_service() -> StorageService:
-    """Get storage service instance with initialized clients."""
-    return StorageService()
+    """Retrieve or initialize the storage service within the request context."""
+    if 'storage_service' not in g:
+        g.storage_service = StorageService()
+    return g.storage_service
 
 
 def get_geocoding_service() -> GeocodingService:
-    """Get geocoding service instance with initialized clients."""
-    return GeocodingService()
+    """Retrieve or initialize the geocoding service within the request context."""
+    if 'geocoding_service' not in g:
+        g.geocoding_service = GeocodingService()
+    return g.geocoding_service
 
 
 def get_pubsub_service() -> PubSubService:
-    """Get Pub/Sub service instance with initialized clients."""
-    return PubSubService()
+    """Retrieve or initialize the Pub/Sub service within the request context."""
+    if 'pubsub_service' not in g:
+        g.pubsub_service = PubSubService()
+    return g.pubsub_service
 
 
 def get_sighting_service() -> SightingService:
-    """Get sighting service instance with initialized clients."""
-    return SightingService()
+    """Retrieve or initialize the sighting service within the request context."""
+    if 'sighting_service' not in g:
+        g.sighting_service = SightingService()
+    return g.sighting_service
 
 
 @main_bp.route('/')
