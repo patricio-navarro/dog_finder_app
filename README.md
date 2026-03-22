@@ -13,15 +13,15 @@ This application allows users to report lost dog sightings. It captures the loca
 ## 🏗️ System Architecture
 
 ```mermaid
-graph TD
-    User([User]) <--> Client[Frontend (Flask/Jinja)]
-    Client -- OAuth 2.0 --> Auth[Google Identity Services]
-    Client -- "Submit Sighting (POST)" --> Backend[Flask Backend]
+flowchart TD
+    User([User]) <--> Client["Frontend (Flask/Jinja)"]
+    Client -- "OAuth 2.0" --> Auth["Google Identity Services"]
+    Client -- "Submit Sighting (POST)" --> Backend["Flask Backend"]
     
     subgraph "Google Cloud Platform"
-        Backend -- "Store Image" --> GCS[Cloud Storage]
+        Backend -- "Store Image" --> GCS["Cloud Storage"]
         Backend -- "Persist Data" --> Firestore[(Firestore)]
-        Backend -- "Publish Event" --> PubSub[Pub/Sub]
+        Backend -- "Publish Event" --> PubSub["Pub/Sub"]
         PubSub -- "Subscription" --> BigQuery[(BigQuery)]
     end
 
