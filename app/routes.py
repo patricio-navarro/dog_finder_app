@@ -1,4 +1,5 @@
 import logging
+import os
 from typing import Tuple
 from flask import Blueprint, render_template, request, jsonify, Response, g
 from flask_wtf.csrf import generate_csrf
@@ -64,6 +65,7 @@ def index() -> str:
 
 
 @main_bp.route('/submit', methods=['POST'])
+@csrf.exempt
 @login_required
 @limiter.limit("20 per hour")
 def submit_dog() -> Tuple[Response, int]:
@@ -73,6 +75,11 @@ def submit_dog() -> Tuple[Response, int]:
     Validates input, uploads image, geocodes location, publishes to Pub/Sub,
     and stores in Firestore.
     """
+    api_key = request.headers.get('X-API-Key')
+    expected_key = os.getenv('LOAD_TEST_API_KEY')
+    if not (api_key and expected_key and api_key == expected_key):
+        csrf.protect()
+
     try:
         latitude, longitude = validate_coordinates(
             request.form.get('lat'),

@@ -55,7 +55,8 @@ gcloud run deploy $SERVICE_NAME \
     --set-env-vars GOOGLE_CLOUD_PROJECT="$GOOGLE_CLOUD_PROJECT" \
     --set-env-vars FLASK_SECRET_KEY="$FLASK_SECRET_KEY" \
     --set-env-vars GOOGLE_CLIENT_ID="$GOOGLE_CLIENT_ID" \
-    --set-env-vars GOOGLE_CLIENT_SECRET="$GOOGLE_CLIENT_SECRET"
+    --set-env-vars GOOGLE_CLIENT_SECRET="$GOOGLE_CLIENT_SECRET" \
+    --set-env-vars LOAD_TEST_API_KEY="$LOAD_TEST_API_KEY"
 
 echo "=================================================="
 echo "Deployment Complete!"

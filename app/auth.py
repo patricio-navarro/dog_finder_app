@@ -114,6 +114,19 @@ def configure_login_manager(login_manager: Any) -> None:
     Configures the Flask-Login manager with the user loader callback.
     Extracts user loading logic out of the app factory.
     """
+    @login_manager.request_loader
+    def load_user_from_request(request: Any) -> Optional[User]:
+        api_key = request.headers.get('X-API-Key')
+        expected_key = os.getenv('LOAD_TEST_API_KEY')
+        if api_key and expected_key and api_key == expected_key:
+            return User(
+                user_id="load_test_bot",
+                name="Load Test Bot",
+                email="bot@test.com",
+                profile_pic=""
+            )
+        return None
+
     @login_manager.user_loader
     def load_user(user_id: str) -> Optional[User]:
         from .services.user_service import UserService
