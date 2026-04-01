@@ -38,9 +38,15 @@ tail -n +2 "$CSV_FILE" | tr -d '\r' | while IFS=, read -r lat lng city region co
     echo "Sending sighting: $date in $city ($lat, $lng) with image $(basename "$IMAGE_FILE")"
     
     # Send POST request
+    # Load local test environment variables if they exist
+    if [ -f "$DIR/../.env" ] && [ -z "$LOAD_TEST_API_KEY" ]; then
+        source "$DIR/../.env"
+    fi
+
     # Added city, region, country to the request even if main.py doesn't explicitly use them yet,
     # to ensure we are sending the full dataset available.
     response=$(curl -s -w "\n%{http_code}" -X POST "$URL" \
+        -H "X-API-Key: $LOAD_TEST_API_KEY" \
         -F "lat=$lat" \
         -F "lng=$lng" \
         -F "city=$city" \

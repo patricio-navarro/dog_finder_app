@@ -67,7 +67,7 @@ def index() -> str:
 @main_bp.route('/submit', methods=['POST'])
 @csrf.exempt
 @login_required
-@limiter.limit("20 per hour")
+@limiter.limit("20 per hour", exempt_when=lambda: request.headers.get('X-API-Key') == os.environ.get('LOAD_TEST_API_KEY') and bool(os.environ.get('LOAD_TEST_API_KEY')))
 def submit_dog() -> Tuple[Response, int]:
     """
     Submit a dog sighting.
