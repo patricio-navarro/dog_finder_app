@@ -40,21 +40,25 @@ flowchart TD
 
 ## ⚙️ Configuration
 The application uses a `.env` file for configuration.
-A template has been created at `.env`.
+A template has been provided in `.env.example`. Copy it to `.env` and fill the values.
 
 ```bash
 GOOGLE_CLOUD_PROJECT=your-project-id
-BUCKET_NAME=analytics-presentation-poc-lost-dogs
-TOPIC_ID=dog-found-topic
-GOOGLE_MAPS_API_KEY=YOUR_GOOGLE_MAPS_API_KEY
+BUCKET_NAME=your-bucket-name
+TOPIC_ID=your-topic-id
+GOOGLE_MAPS_API_KEY=YOUR_API_KEY
 SERVICE_NAME=dog-finder-app
 REGION=us-central1
-BIGQUERY_DATASET=dog_analytics
-BIGQUERY_TABLE=sightings
+BIGQUERY_DATASET=lost_dogs
+BIGQUERY_TABLE=publications
+GOOGLE_CLIENT_ID=your-client-id.apps.googleusercontent.com
+GOOGLE_CLIENT_SECRET=YOUR_OAUTH_CLIENT_SECRET
+FLASK_SECRET_KEY=YOUR_RANDOM_FLASK_SECRET_KEY
+LOAD_TEST_API_KEY=your_secret_api_key_here
 ```
 
 > [!IMPORTANT]
-> You must replace `YOUR_GOOGLE_MAPS_API_KEY` and `your-project-id` with real values for the app to function correctly.
+> You must replace credentials like `YOUR_API_KEY`, `YOUR_OAUTH_CLIENT_SECRET`, and `FLASK_SECRET_KEY` with real values for the app to function correctly. `LOAD_TEST_API_KEY` is required if you intend to run the load testing script.
 
 ## 🚀 Running Locally
 1.  **Build the Docker Image**:
@@ -107,3 +111,29 @@ This will:
 - Build the image using Cloud Build.
 - Deploy the service to Cloud Run (Region: `us-central1`).
 - Set the environment variables from your `.env` file.
+
+## 🧪 Development & Testing
+
+1.  **Virtual Environment**: We use `uv` for Python virtual environments.
+    ```bash
+    uv venv
+    source .venv/bin/activate
+    uv pip install -r requirements.txt
+    ```
+
+2.  **Pre-commit Hooks**: The project uses `pre-commit` to ensure code quality and prevent secrets leakage (via `gitleaks`).
+    ```bash
+    pre-commit install
+    ```
+
+3.  **Running Tests**:
+    Tests are written using `pytest`. You can run them via:
+    ```bash
+    pytest tests/
+    ```
+
+4.  **Load Testing**:
+    A script is provided to simulate load. Make sure to set `LOAD_TEST_API_KEY` in your `.env` file first.
+    ```bash
+    ./scripts/load_test.sh
+    ```
